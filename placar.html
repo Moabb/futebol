@@ -410,10 +410,12 @@
             // 5. Sincronizar Cronômetro e Período
             document.getElementById('period').textContent = data.timer.period;
             
-            // CORREÇÃO CRÍTICA DO ALVO DE LEITURA DO BANCO DE DADOS
+            // =============================================================
+            // CORREÇÃO DEFINITIVA: Lendo a chave correta 'timer.acrescimo'
+            // =============================================================
             let extraTimeVal = 0;
-            if (data.extraTime !== undefined) {
-                const cleanStr = String(data.extraTime).replace(/[^0-9]/g, '');
+            if (data.timer && data.timer.acrescimo !== undefined) {
+                const cleanStr = String(data.timer.acrescimo).replace(/[^0-9]/g, '');
                 extraTimeVal = parseInt(cleanStr) || 0;
             }
 
@@ -424,6 +426,7 @@
             } else {
                 extraTimeEl.style.setProperty('display', 'none', 'important');
             }
+            // =============================================================
             
             if (Math.abs(localSeconds - data.timer.seconds) > 2 || isTimerRunning !== data.timer.isRunning) {
                 localSeconds = data.timer.seconds;
