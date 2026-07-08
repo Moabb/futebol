@@ -356,14 +356,30 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const matchId = urlParams.get('match') || "jogo_padrao";
-
-        const matchRef = ref(db, 'matches/' + matchId);
-
+        let currentMatchListener = null; 
         let localSeconds = 0;
         let isTimerRunning = false;
         let clockInterval = null;
+
+        // 1. ESCUTA GLOBAL PARA SABER QUAL JOGO ESTÁ ATIVO
+        const activeMatchRef = ref(db, 'activeMatchId');
+        
+        onValue(activeMatchRef, (snapshot) => {
+            const activeId = snapshot.val() || "jogo_padrao";
+            console.log("Mudança de partida detectada! Nova partida ativa:", activeId);
+            
+            // Conecta na partida ativa atual
+            const matchRef = ref(db, 'matches/' + activeId);
+            
+            // Ativa o monitoramento dos dados reais do jogo ativo
+            onValue(matchRef, (matchSnapshot) => {
+                const data = matchSnapshot.val();
+                if (!data) return;
+                
+                // Processa e renderiza o placar na tela
+                renderScoreboard(data);
+            });
+        });
 
         function runLocalClock() {
             if (isTimerRunning) {
@@ -390,40 +406,40 @@
             }
         }
 
-        onValue(matchRef, (snapshot) => {
-            const data = snapshot.val();
-            if (!data) return;
-
-            // 1. Atualizar Visibilidade Baseada no Controle do Painel
+        // FUNÇÃO QUE DETÉM TODA A LÓGICA VISUAL INTACTA
+        function renderScoreboard(data) {
+            // Visibilidade do Placar
             const wrapper = document.getElementById('scoreboard-wrapper');
             const isVisible = data.overlays && data.overlays.placar;
             
-            // 2. Definir o Tema Corretamente mantendo a visibilidade estável
+            // Definição do Tema Estável
             const design = data.config.design || { style: "cyber", primary: "#1e1b4b", secondary: "#0f172a", accent: "#f59e0b" };
             wrapper.className = ''; 
             if (isVisible) wrapper.classList.add('visible');
             wrapper.classList.add(`theme-${design.style}`);
 
-            // 3. Atualizar Textos e Gols
+            // Nomes e Gols
             document.getElementById('name-home').textContent = data.config.home.shortName || "CAS";
             document.getElementById('name-away').textContent = data.config.away.shortName || "VIS";
-            document.getElementById('score-home').textContent = data.stats.home.goals;
-            document.getElementById('score-away').textContent = data.stats.away.goals;
+            document.getElementById('score-home').textContent = data.stats.home.goals ?? 0;
+            document.getElementById('score-away').textContent = data.stats.away.goals ?? 0;
 
-            // 4. Atualizar Cartões Vermelhos
+            // Cartões Vermelhos
             updateRedCards('home', data.stats.home.redCards);
             updateRedCards('away', data.stats.away.redCards);
 
-            // 5. Sincronizar Cronômetro e Período
-            document.getElementById('period').textContent = data.timer.period;
+            // Cronômetro e Período
+            document.getElementById('period').textContent = data.timer.period || "1° TEMPO";
             
-            // =============================================================
-            // CORREÇÃO DEFINITIVA: Lendo a chave correta 'timer.acrescimo'
-            // =============================================================
+            // Lendo dinamicamente 'injuryTime' ou 'acrescimo' do seu painel
             let extraTimeVal = 0;
-            if (data.timer && data.timer.injuryTime !== undefined) {
-                const cleanStr = String(data.timer.injuryTime).replace(/[^0-9]/g, '');
-                extraTimeVal = parseInt(cleanStr) || 0;
+            const hasInjuryTime = data.timer.injuryTime !== undefined;
+            const showInjury = data.timer.showInjury !== false;
+
+            if (hasInjuryTime && showInjury) {
+                extraTimeVal = parseInt(data.timer.injuryTime) || 0;
+            } else if (data.timer.acrescimo !== undefined) {
+                extraTimeVal = parseInt(data.timer.acrescimo) || 0;
             }
 
             const extraTimeEl = document.getElementById('extra-time');
@@ -433,27 +449,26 @@
             } else {
                 extraTimeEl.style.setProperty('display', 'none', 'important');
             }
-            // =============================================================
             
             if (Math.abs(localSeconds - data.timer.seconds) > 2 || isTimerRunning !== data.timer.isRunning) {
-                localSeconds = data.timer.seconds;
+                localSeconds = data.timer.seconds || 0;
                 document.getElementById('timer').textContent = formatTime(localSeconds);
             }
             
             isTimerRunning = data.timer.isRunning;
             runLocalClock();
 
-            // 6. Atualizar as Duas Cores dos Uniformes
+            // Cores dos Uniformes
             document.getElementById('badge-home-c1').style.backgroundColor = data.config.home.color1 || "#3b82f6";
             document.getElementById('badge-home-c2').style.backgroundColor = data.config.home.color2 || "#ffffff";
             document.getElementById('badge-away-c1').style.backgroundColor = data.config.away.color1 || "#ef4444";
             document.getElementById('badge-away-c2').style.backgroundColor = data.config.away.color2 || "#ffffff";
 
-            // 7. Injetar Variáveis de Cores de Design do Painel no CSS
+            // Injetar Variáveis de Cores
             document.documentElement.style.setProperty('--theme-primary', design.primary);
             document.documentElement.style.setProperty('--theme-secondary', design.secondary);
             document.documentElement.style.setProperty('--theme-accent', design.accent);
-        });
+        }
 
         function formatTime(secs) {
             const m = Math.floor(secs / 60).toString().padStart(2, '0');
