@@ -3,614 +3,345 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel de Controle - Transmissão de Futebol</title>
+    <title>Overlay - Placar Dinâmico</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Space+Grotesk:wght@500;700&family=Kanit:wght@600;800&display=swap');
 
-        :root {
-            --bg-principal: #0f172a;
-            --bg-card: #1e293b;
-            --bg-input: #334155;
-            --texto: #f8fafc;
-            --texto-mutado: #94a3b8;
-            --primaria: #3b82f6;
-            --sucesso: #10b981;
-            --perigo: #ef4444;
-            --alerta: #f59e0b;
-        }
-
-        body {
+        /* Configuração de transparência absoluta para o OBS Studio */
+        html, body {
             margin: 0;
-            padding: 20px;
-            background-color: var(--bg-principal);
-            color: var(--texto);
-            font-family: 'Inter', sans-serif;
-            box-sizing: border-box;
-        }
-
-        *, *:before, *:after { box-sizing: inherit; }
-
-        h1, h2, h3 { margin: 0; padding-bottom: 10px; }
-
-        /* TELA DE LOGIN */
-        #login-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--bg-principal);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-        }
-        .login-card {
-            background: var(--bg-card);
-            padding: 30px;
-            border-radius: 8px;
-            border: 1px solid #475569;
-            width: 100%;
-            max-width: 400px;
-            text-align: center;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-        }
-
-        /* CONTEÚDO PRINCIPAL (OCULTO ANTES DO LOGIN) */
-        #main-content {
-            display: none;
-        }
-
-        .collapsible-container {
-            background: var(--bg-card);
-            border-radius: 8px;
-            margin-bottom: 20px;
-            overflow: hidden;
-            border: 1px solid #475569;
-        }
-
-        .collapsible-header {
-            background: #111827;
-            padding: 15px 20px;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            user-select: none;
-        }
-
-        .collapsible-header h2 { padding: 0; font-size: 18px; color: var(--primaria); }
-
-        .collapsible-content {
-            padding: 20px;
-            display: block;
-        }
-
-        .collapsible-content.minimized { display: none; }
-
-        .grid-config {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 20px;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        label {
-            font-size: 12px;
-            color: var(--texto-mutado);
-            margin-bottom: 5px;
-            font-weight: 600;
-        }
-
-        input, select, textarea {
-            background: var(--bg-input);
-            border: 1px solid #475569;
-            color: var(--texto);
-            padding: 8px 12px;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-
-        input[type="color"] {
             padding: 0;
-            width: 100%;
-            height: 40px;
-            border: 1px solid #475569;
-            border-radius: 6px;
-            cursor: pointer;
-            background: none;
-        }
-        ::-webkit-color-swatch-wrapper { padding: 0; }
-        ::-webkit-color-swatch { border: none; border-radius: 5px; }
-
-        .color-pickers {
-            display: flex;
-            gap: 10px;
+            background: transparent !important;
+            overflow: hidden;
+            font-family: 'Space Grotesk', sans-serif;
         }
 
-        button {
-            background: var(--primaria);
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 4px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        button:hover { opacity: 0.9; }
-        .btn-success { background: var(--sucesso); }
-        .btn-danger { background: var(--perigo); }
-
-        .live-container {
-            display: grid;
-            grid-template-columns: 1fr 2fr 1fr;
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-
-        @media (max-width: 1024px) {
-            .live-container { grid-template-columns: 1fr; }
-        }
-
-        .card {
-            background: var(--bg-card);
-            padding: 20px;
-            border-radius: 8px;
-            border: 1px solid #475569;
-        }
-
-        .timer-center {
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-        .display-tempo {
-            font-size: 48px;
-            font-family: monospace;
-            font-weight: 800;
-            margin: 10px 0;
-            color: var(--sucesso);
-        }
-        .display-acrescimo {
-            font-size: 20px;
-            font-weight: bold;
-            color: var(--alerta);
-            margin-top: -5px;
-            margin-bottom: 10px;
-        }
-        .timer-controls { display: flex; gap: 10px; margin-bottom: 15px; }
-        .manual-time { display: flex; gap: 5px; max-width: 200px; }
-
-        .stat-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid #334155;
-        }
-        .stat-actions { display: flex; gap: 5px; }
-        .stat-value {
-            font-size: 18px;
-            font-weight: 800;
-            min-width: 30px;
-            text-align: center;
-        }
-
-        .live-score-board {
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            background: #111827;
-            padding: 15px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-        }
-        .live-team-name { font-size: 20px; font-weight: 800; }
-        .live-score-number { font-size: 36px; font-weight: 900; color: var(--primaria); }
-
-        .penalty-container {
-            background: var(--bg-card);
-            padding: 20px;
-            border-radius: 8px;
-            border: 1px solid #475569;
-            margin-bottom: 20px;
-        }
-        .penalty-grid {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 15px;
-            gap: 20px;
-        }
-        .penalty-team-block { flex: 1; }
-        
-        .dots-container {
-            display: flex;
-            gap: 12px;
-            margin-top: 10px;
-            flex-wrap: wrap;
-        }
-        .penalty-slot {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 5px;
-            background: rgba(0, 0, 0, 0.15);
-            padding: 6px;
-            border-radius: 6px;
-            border: 1px solid #334155;
-        }
-        .dot {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: #475569;
+        #scoreboard-wrapper {
+            position: absolute;
+            top: 30px;
+            left: 30px;
             display: flex;
             align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            font-weight: bold;
-            user-select: none;
+            opacity: 0; /* Começa oculto e obedece o painel */
+            transform: translateY(-20px);
+            transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .dot.convertido { background: var(--sucesso); color: white; }
-        .dot.desperdiçado { background: var(--perigo); color: white; }
-        
-        .penalty-action-buttons {
+
+        /* Classe de ativação controlada pelo Firebase */
+        #scoreboard-wrapper.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Container de cores duplas dos times */
+        .color-badge-container {
+            display: flex;
+            flex-direction: row;
+            gap: 2px;
+            width: 12px;
+            height: 24px;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .color-stripe {
+            flex: 1;
+            height: 100%;
+        }
+
+        /* POSICIONAMENTO ABSOLUTO DOS CARTÕES (Evita esticar o layout) */
+        .red-cards-container {
+            position: absolute;
+            top: -12px; /* Joga os cartões para cima da barra principal */
             display: flex;
             gap: 3px;
+            align-items: center;
+            z-index: 10;
         }
-        .btn-pen-action {
-            padding: 2px 6px;
-            font-size: 11px;
-            border-radius: 3px;
-            font-weight: 800;
+        #red-cards-home {
+            left: 20px; /* Alinhado acima do nome/badge do time da casa */
         }
-        .btn-pen-action.btn-gol { background: #065f46; color: #10b981; }
-        .btn-pen-action.btn-gol.active { background: var(--sucesso); color: white; }
-        .btn-pen-action.btn-erro { background: #991b1b; color: #f87171; }
-        .btn-pen-action.btn-erro.active { background: var(--perigo); color: white; }
-
-        .sub-flex-container {
-            display: flex;
-            gap: 20px;
-            margin-top: 10px;
+        #red-cards-away {
+            right: 140px; /* Alinhado acima do nome/badge do time visitante */
         }
-        .sub-box {
-            flex: 1;
-            background: #111827;
-            padding: 15px;
-            border-radius: 6px;
-            border: 1px solid #334155;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .sub-select-group {
-            display: flex;
-            gap: 10px;
-        }
-        .sub-field {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-        .sub-field label {
-            font-size: 11px;
-            color: var(--texto-mutado);
-            margin-bottom: 3px;
-        }
-        .sub-field select {
-            width: 100%;
+        
+        .red-card-icon {
+            width: 9px;
+            height: 13px;
+            background-color: #ef4444;
+            border-radius: 1px;
+            box-shadow: 0 0 6px rgba(239, 68, 68, 0.8);
+            border: 1px solid rgba(0, 0, 0, 0.3);
+            display: inline-block;
         }
 
-        .overlay-control-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
+        /* ESTRUTURA BLINDADA DO CRONÔMETRO + ACRESCIMO */
+        .timer-container {
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: flex-start !important;
+            justify-content: center !important;
         }
-        .btn-toggle-overlay {
+        
+        #extra-time {
+            font-weight: 900 !important;
+            color: #ef4444 !important;
+            margin-left: 4px !important;
+            display: none; /* Controlado rigorosamente via JS */
+            line-height: 1 !important;
+        }
+
+        /* ======================================================= */
+        /* ESTILO 1: CYBER NEO (Design Futurista & Fluid)          */
+        /* ======================================================= */
+        .theme-cyber {
+            gap: 6px;
+        }
+        .theme-cyber .main-bar {
+            background: var(--theme-primary);
+            border: 2px solid var(--theme-accent);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5), inset 0 0 10px rgba(255,255,255,0.05);
+            backdrop-filter: blur(4px);
+            position: relative;
+        }
+        .theme-cyber .team-block {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            font-size: 20px;
+            color: #ffffff;
+        }
+        .theme-cyber .score {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 26px;
+            font-weight: 900;
+            color: var(--theme-accent);
+            margin: 0 15px;
+        }
+        .theme-cyber .divider {
+            color: rgba(255,255,255,0.3);
+            font-weight: 300;
+        }
+        .theme-cyber .time-bar {
+            background: var(--theme-secondary);
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 7px 15px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 15px;
+            min-width: 85px;
+        }
+
+        #timer {
+            width: 65px;
+        }
+
+        .theme-cyber #timer {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px;
+            color: #ffffff;
+            font-weight: 700;
+            text-align: left;
+        }
+        .theme-cyber #extra-time {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 16px !important;
+            margin-top: 3px;
+        }
+        .theme-cyber #period {
             font-size: 14px;
+            letter-spacing: 1px;
+            color: var(--theme-accent);
+            font-weight: 700;
+        }
+
+        /* ======================================================= */
+        /* ESTILO 2: ASYMMETRIC EDGE (Cortes Diagonais Elegantes)  */
+        /* ======================================================= */
+        .theme-minimal {
+            transform: skewX(-12px);
+        }
+        .theme-minimal .main-bar {
+            background: var(--theme-primary);
+            display: flex;
+            align-items: center;
+            border-left: 5px solid var(--theme-accent);
+            box-shadow: 5px 5px 0px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        .theme-minimal .team-block {
+            padding: 10px 20px;
+            font-weight: 700;
+            font-size: 22px;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .theme-minimal .score {
+            background: var(--theme-secondary);
+            padding: 10px 18px;
+            font-size: 24px;
+            font-weight: 900;
+            color: #ffffff;
+            border-bottom: 3px solid var(--theme-accent);
+        }
+        .theme-minimal .divider { display: none; }
+        .theme-minimal .time-bar {
+            background: #ffffff;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 5px 5px 0px rgba(0,0,0,0.2);
+        }
+        .theme-minimal #timer {
+            font-size: 22px;
+            color: var(--theme-secondary);
+            font-weight: 700;
+        }
+        .theme-minimal #extra-time {
+            font-size: 14px !important;
+        }
+        .theme-minimal #period {
+            background: var(--theme-accent);
+            color: #000;
+            font-size: 10px;
+            padding: 2px 5px;
+            font-weight: 700;
+        }
+        .theme-minimal .red-card-icon {
+            transform: skewX(12px);
+        }
+        .theme-minimal span, .theme-minimal div:not(.color-badge-container):not(.red-cards-container):not(.red-card-icon) {
+            transform: skewX(12px);
+        }
+
+        /* ======================================================= */
+        /* ESTILO 3: SOLID MONOLITH (Clean & Premium Broadcast)   */
+        /* ======================================================= */
+        .theme-monolith {
+            background: rgba(15, 23, 42, 0.85);
             border-radius: 6px;
-            background: #334155;
-            border: 2px solid transparent;
-            text-transform: uppercase;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.1);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            font-family: 'Kanit', sans-serif;
+            position: relative;
         }
-        .btn-toggle-overlay .status-text {
-            font-size: 11px;
-            margin-top: 5px;
-            font-weight: 400;
-            opacity: 0.7;
+        .theme-monolith .main-bar {
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            position: relative;
         }
-        .btn-toggle-overlay.active {
-            background: var(--sucesso);
-            border-color: #fff;
-            box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+        .theme-monolith .team-block {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 15px;
+            color: #ffffff;
+            font-size: 22px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        .theme-monolith .color-badge-container {
+            width: 6px;
+            height: 26px;
+            border-radius: 2px;
+        }
+        .theme-monolith .score {
+            font-size: 26px;
+            font-weight: 800;
+            color: #ffffff;
+            padding: 0 10px;
+            min-width: 35px;
+            text-align: center;
+        }
+        .theme-monolith .divider {
+            color: var(--theme-accent);
+            font-size: 16px;
+            font-weight: 800;
+            opacity: 0.8;
+            padding: 0 5px;
+        }
+        .theme-monolith .time-bar {
+            background: var(--theme-accent);
+            align-self: stroke;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 0 18px;
+            min-height: 55px;
+        }
+        .theme-monolith #timer {
+            color: #0f172a;
+            font-size: 20px;
+            font-weight: 800;
+            line-height: 1;
+        }
+        .theme-monolith #extra-time {
+            font-size: 13px !important;
+            color: #b91c1c !important; 
+        }
+        .theme-monolith #period {
+            color: rgba(15, 23, 42, 0.75);
+            font-size: 10px;
+            font-weight: 800;
+            margin-top: 2px;
+            letter-spacing: 0.5px;
         }
     </style>
 </head>
 <body>
 
-    <div id="login-overlay">
-        <div class="login-card">
-            <h2 style="color: var(--primaria); padding-bottom: 15px;">🔒 Acesso Restrito</h2>
-            <div class="form-group" style="text-align: left;">
-                <label>E-mail do Administrador</label>
-                <input type="email" id="login-email" placeholder="seu-email@dominio.com" style="font-size: 14px;">
-            </div>
-            <div class="form-group" style="text-align: left;">
-                <label>Senha</label>
-                <input type="password" id="login-password" placeholder="Sua senha..." style="font-size: 14px;">
-            </div>
-            <button id="btn-submit-login" style="width: 100%; margin-top: 5px;" class="btn-success">Entrar no Painel</button>
-            <p id="login-error" style="color: var(--perigo); font-size: 13px; margin-top: 10px; display: none;">⚠️ Credenciais incorretas ou erro de conexão!</p>
-        </div>
-    </div>
+    <div id="scoreboard-wrapper" class="theme-cyber">
+        <div class="red-cards-container" id="red-cards-home"></div>
+        <div class="red-cards-container" id="red-cards-away"></div>
 
-    <div id="main-content">
-        <div class="collapsible-container">
-            <div class="collapsible-header" id="btn-toggle-config">
-                <h2>⚙️ PARTE 1: CONFIGURAÇÃO DO JOGO, ESCALAÇÕES & DESIGN</h2>
-                <span id="status-icon">▲ Clique para Minimizar</span>
-            </div>
-            <div class="collapsible-content" id="config-content">
-                
-                <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; background: #111827; padding: 15px; border-radius: 6px;">
-                    <label style="color: var(--primaria); margin: 0; font-size: 13px;">🔗 SELECIONAR OU CRIAR PARTIDA NO FIREBASE</label>
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        <div class="form-group" style="margin:0; flex: 1;">
-                            <select id="match-id-select" style="width: 100%;">
-                                <option value="jogo_padrao">Carregando partidas disponíveis...</option>
-                            </select>
-                        </div>
-                        <div class="form-group" style="margin:0; flex: 1;">
-                            <input type="text" id="match-id-new" placeholder="Ou digite o nome para criar um NOVO jogo">
-                        </div>
-                        <button id="btn-load-match" style="white-space: nowrap;">Conectar e Carregar</button>
-                    </div>
+        <div class="main-bar">
+            <div class="team-block home-team">
+                <div class="color-badge-container">
+                    <div class="color-stripe" id="badge-home-c1"></div>
+                    <div class="color-stripe" id="badge-home-c2"></div>
                 </div>
-
-                <div class="grid-config">
-                    <div style="background: rgba(255,255,255,0.02); padding: 15px; border-radius: 6px;">
-                        <h3>🏠 TIME DA CASA</h3>
-                        <div class="form-group">
-                            <label>Nome do Time</label>
-                            <input type="text" id="home-name" value="Casa">
-                        </div>
-                        <div class="form-group">
-                            <label>Nome Reduzido (Ex: CRU)</label>
-                            <input type="text" id="home-short-name" value="CAS" maxlength="5">
-                        </div>
-                        <div class="form-group">
-                            <label>Cores do Uniforme</label>
-                            <div class="color-pickers">
-                                <input type="color" id="home-color1" value="#3b82f6">
-                                <input type="color" id="home-color2" value="#ffffff">
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label>Técnico</label>
-                            <input type="text" id="home-coach" value="">
-                        </div>
-                        <div class="form-group">
-                            <label>Esquema Tático</label>
-                            <select id="home-tactic"></select>
-                        </div>
-                        <div class="form-group">
-                            <label>Jogadores (1 por linha - Primeiros 11 são Titulares)</label>
-                            <textarea id="home-players" rows="6" placeholder="1 - Goleiro&#10;2 - Lateral..."></textarea>
-                        </div>
-                    </div>
-
-                    <div style="background: rgba(255,255,255,0.02); padding: 15px; border-radius: 6px;">
-                        <h3>✈️ TIME VISITANTE</h3>
-                        <div class="form-group">
-                            <label>Nome do Time</label>
-                            <input type="text" id="away-name" value="Visitante">
-                        </div>
-                        <div class="form-group">
-                            <label>Nome Reduzido (Ex: AMG)</label>
-                            <input type="text" id="away-short-name" value="VIS" maxlength="5">
-                        </div>
-                        <div class="form-group">
-                            <label>Cores do Uniforme</label>
-                            <div class="color-pickers">
-                                <input type="color" id="away-color1" value="#ef4444">
-                                <input type="color" id="away-color2" value="#ffffff">
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label>Técnico</label>
-                            <input type="text" id="away-coach" value="">
-                        </div>
-                        <div class="form-group">
-                            <label>Esquema Tático</label>
-                            <select id="away-tactic"></select>
-                        </div>
-                        <div class="form-group">
-                            <label>Jogadores (1 por linha - Primeiros 11 são Titulares)</label>
-                            <textarea id="away-players" rows="6" placeholder="1 - Goleiro&#10;2 - Lateral..."></textarea>
-                        </div>
-                    </div>
-
-                    <div style="background: rgba(59, 130, 246, 0.05); padding: 15px; border-radius: 6px; border: 1px dashed var(--primaria);">
-                        <h3>🎨 DESIGN DAS OVERLAYS</h3>
-                        
-                        <div class="form-group">
-                            <label>Estilo Visual do Placar</label>
-                            <select id="overlay-style">
-                                <option value="cyber">Cyber Neo (Futurista & Fluido)</option>
-                                <option value="minimal">Asymmetric Edge (Sofisticado & Elegante)</option>
-                                <option value="monolith">Solid Monolith (Imponente & Brutalista)</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Cor Principal</label>
-                            <input type="color" id="design-color-primary" value="#1e1b4b">
-                        </div>
-
-                        <div class="form-group">
-                            <label>Cor Secundária</label>
-                            <input type="color" id="design-color-secondary" value="#0f172a">
-                        </div>
-
-                        <div class="form-group">
-                            <label>Cor de Destaque / Accent</label>
-                            <input type="color" id="design-color-accent" value="#f59e0b">
-                        </div>
-                    </div>
-                </div>
-
-                <div style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center;">
-                    <button id="btn-clear-form" style="background: #475569;">✨ NOVO (Limpar Painel)</button>
-                    <button id="btn-save-config" class="btn-success">💾 Salvar Configurações</button>
-                </div>
+                <span id="name-home">CASA</span>
             </div>
-        </div>
-
-        <div class="card" style="margin-bottom: 20px; border-color: var(--primaria);">
-            <h3 style="color: var(--primaria); font-size: 18px; padding-bottom: 5px;">🎬 CONTROLE DE TELAS (ON / OFF NO OBS)</h3>
+            <div class="score" id="score-home">0</div>
             
-            <div class="overlay-control-grid">
-                <button class="btn-toggle-overlay" id="btn-show-placar" onclick="toggleOverlay('placar')">⏱️ Placar do Jogo <span class="status-text" id="status-placar">Desligado</span></button>
-                <button class="btn-toggle-overlay" id="btn-show-lineupHome" onclick="toggleOverlay('lineupHome')">🏠 Escalação Casa <span class="status-text" id="status-lineupHome">Desligado</span></button>
-                <button class="btn-toggle-overlay" id="btn-show-lineupAway" onclick="toggleOverlay('lineupAway')">✈️ Escalação Visitante <span class="status-text" id="status-lineupAway">Desligado</span></button>
-                <button class="btn-toggle-overlay" id="btn-show-substitution" onclick="toggleOverlay('substitution')">⇄ Gráfico Substituição <span class="status-text" id="status-substitution">Desligado</span></button>
-                <button class="btn-toggle-overlay" id="btn-show-stats" onclick="toggleOverlay('stats')">📊 Estatísticas <span class="status-text" id="status-stats">Desligado</span></button>
-                <button class="btn-toggle-overlay" id="btn-show-penalties" onclick="toggleOverlay('penalties')">🏆 Placar Pênaltis <span class="status-text" id="status-penalties">Desligado</span></button>
-                <button class="btn-toggle-overlay" id="btn-show-endgame" onclick="toggleOverlay('endgame')">🏁 Fim de Jogo <span class="status-text" id="status-endgame">Desligado</span></button>
-            </div>
-        </div>
-
-        <h2 style="color: var(--sucesso); font-size: 20px; margin-bottom: 10px;">🔴 PLACAR EM TEMPO REAL</h2>
-        
-        <div class="live-score-board">
-            <div class="live-team-name"><span id="lbl-home-name">CASA</span> (<span id="lbl-home-short" style="color:var(--texto-mutado);">CAS</span>)</div>
-            <div class="live-score-number" id="lbl-home-goals">0</div>
-            <div style="font-size: 24px; color: var(--texto-mutado);">X</div>
-            <div class="live-score-number" id="lbl-away-goals">0</div>
-            <div class="live-team-name"><span id="lbl-away-name">VISITANTE</span> (<span id="lbl-away-short" style="color:var(--texto-mutado);">VIS</span>)</div>
-        </div>
-
-        <div class="live-container">
-            <div class="card">
-                <h3>Estatísticas: <span id="lbl-side-home">Casa</span></h3>
-                <hr style="border-color: #334155; margin-bottom: 15px;">
-                <div class="stat-row"><span>Gols</span><div class="stat-actions"><button onclick="changeStat('home', 'goals', -1)">-</button><span class="stat-value" id="val-home-goals">0</span><button class="btn-success" onclick="changeStat('home', 'goals', 1)">+</button></div></div>
-                <div class="stat-row"><span>Chutes no Gol</span><div class="stat-actions"><button onclick="changeStat('home', 'shotsOn', -1)">-</button><span class="stat-value" id="val-home-shotsOn">0</span><button onclick="changeStat('home', 'shotsOn', 1)">+</button></div></div>
-                <div class="stat-row"><span>Chutes Fora</span><div class="stat-actions"><button onclick="changeStat('home', 'shotsOff', -1)">-</button><span class="stat-value" id="val-home-shotsOff">0</span><button onclick="changeStat('home', 'shotsOff', 1)">+</button></div></div>
-                <div class="stat-row"><span>Faltas</span><div class="stat-actions"><button onclick="changeStat('home', 'fouls', -1)">-</button><span class="stat-value" id="val-home-fouls">0</span><button onclick="changeStat('home', 'fouls', 1)">+</button></div></div>
-                <div class="stat-row"><span>Escanteios</span><div class="stat-actions"><button onclick="changeStat('home', 'corners', -1)">-</button><span class="stat-value" id="val-home-corners">0</span><button onclick="changeStat('home', 'corners', 1)">+</button></div></div>
-                <div class="stat-row"><span>C. Amarelo</span><div class="stat-actions"><button onclick="changeStat('home', 'yellowCards', -1)">-</button><span class="stat-value" id="val-home-yellowCards">0</span><button style="background:var(--alerta)" onclick="changeStat('home', 'yellowCards', 1)">+</button></div></div>
-                <div class="stat-row"><span>C. Vermelho</span><div class="stat-actions"><button onclick="changeStat('home', 'redCards', -1)">-</button><span class="stat-value" id="val-home-redCards">0</span><button style="background:var(--perigo)" onclick="changeStat('home', 'redCards', 1)">+</button></div></div>
-            </div>
-
-            <div class="card timer-center">
-                <h3>CRONÔMETRO</h3>
-                <div class="display-tempo" id="live-timer">00:00</div>
-                <div class="display-acrescimo" id="live-extra-display" style="display: none;">+0</div>
-                <div id="live-period" style="font-weight: bold; color: var(--texto-mutado); margin-bottom: 10px;">1° TEMPO</div>
-                <div class="timer-controls">
-                    <button id="btn-start-timer" class="btn-success">Iniciar / Pausar</button>
-                    <button id="btn-next-period" style="background: var(--alerta);">Mudar Período</button>
-                </div>
-                <div class="manual-time" style="margin-bottom: 15px;">
-                    <input type="number" id="input-manual-min" placeholder="Min" min="0" style="width: 70px;">
-                    <input type="number" id="input-manual-seg" placeholder="Seg" min="0" max="59" style="width: 70px;">
-                    <button id="btn-set-manual-time">Editar</button>
-                </div>
-
-                <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; width: 100%; border: 1px solid #475569;">
-                    <label style="margin-bottom: 5px; display: block;">⏱️ GERENCIAR ACURÉSCIMOS</label>
-                    <div style="display: flex; gap: 5px; justify-content: center; align-items: center;">
-                        <input type="number" id="input-injury-time" placeholder="Min" min="0" max="99" style="width: 75px; padding: 5px; text-align: center;" value="0">
-                        <button id="btn-toggle-injury" style="font-size: 12px; padding: 6px 10px;" class="btn-danger">Mostrar Tela</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <h3>Estatísticas: <span id="lbl-side-away">Visitante</span></h3>
-                <hr style="border-color: #334155; margin-bottom: 15px;">
-                <div class="stat-row"><span>Gols</span><div class="stat-actions"><button onclick="changeStat('away', 'goals', -1)">-</button><span class="stat-value" id="val-away-goals">0</span><button class="btn-success" onclick="changeStat('away', 'goals', 1)">+</button></div></div>
-                <div class="stat-row"><span>Chutes no Gol</span><div class="stat-actions"><button onclick="changeStat('away', 'shotsOn', -1)">-</button><span class="stat-value" id="val-away-shotsOn">0</span><button onclick="changeStat('away', 'shotsOn', 1)">+</button></div></div>
-                <div class="stat-row"><span>Chutes Fora</span><div class="stat-actions"><button onclick="changeStat('away', 'shotsOff', -1)">-</button><span class="stat-value" id="val-away-shotsOff">0</span><button onclick="changeStat('away', 'shotsOff', 1)">+</button></div></div>
-                <div class="stat-row"><span>Faltas</span><div class="stat-actions"><button onclick="changeStat('away', 'fouls', -1)">-</button><span class="stat-value" id="val-away-fouls">0</span><button onclick="changeStat('away', 'fouls', 1)">+</button></div></div>
-                <div class="stat-row"><span>Escanteios</span><div class="stat-actions"><button onclick="changeStat('away', 'corners', -1)">-</button><span class="stat-value" id="val-away-corners">0</span><button onclick="changeStat('away', 'corners', 1)">+</button></div></div>
-                <div class="stat-row"><span>C. Amarelo</span><div class="stat-actions"><button onclick="changeStat('away', 'yellowCards', -1)">-</button><span class="stat-value" id="val-away-yellowCards">0</span><button style="background:var(--alerta)" onclick="changeStat('away', 'yellowCards', 1)">+</button></div></div>
-                <div class="stat-row"><span>C. Vermelho</span><div class="stat-actions"><button onclick="changeStat('away', 'redCards', -1)">-</button><span class="stat-value" id="val-away-redCards">0</span><button style="background:var(--perigo)" onclick="changeStat('away', 'redCards', 1)">+</button></div></div>
-            </div>
-        </div>
-
-        <div class="card" style="margin-bottom: 20px; border-color: var(--alerta);">
-            <h3 style="color: var(--alerta);">⇄ EFETUAR SUBSTITUIÇÕES DE JOGADORES (DINÂMICO)</h3>
-            <p style="font-size: 12px; color: var(--texto-mutado); margin: 0 0 10px 0;">Os seletores se baseiam na lista inserida nas configurações lá em cima (Linhas 1-11 são titulares, o resto reserva).</p>
+            <div class="divider">X</div>
             
-            <div class="sub-flex-container">
-                <div class="sub-box">
-                    <h4 style="margin: 0; color: #fff;" id="lbl-sub-home">Casa</h4>
-                    <div class="sub-select-group">
-                        <div class="sub-field">
-                            <label>Saindo (Titular)</label>
-                            <select id="select-home-out"><option value="">Carregando...</option></select>
-                        </div>
-                        <div class="sub-field">
-                            <label>Entrando (Reserva)</label>
-                            <select id="select-home-in"><option value="">Carregando...</option></select>
-                        </div>
-                    </div>
-                    <button class="btn-success" style="width: 100%;" id="btn-sub-home">Lançar Substituição</button>
-                </div>
-                <div class="sub-box">
-                    <h4 style="margin: 0; color: #fff;" id="lbl-sub-away">Visitante</h4>
-                    <div class="sub-select-group">
-                        <div class="sub-field">
-                            <label>Saindo (Titular)</label>
-                            <select id="select-away-out"><option value="">Carregando...</option></select>
-                        </div>
-                        <div class="sub-field">
-                            <label>Entrando (Reserva)</label>
-                            <select id="select-away-in"><option value="">Carregando...</option></select>
-                        </div>
-                    </div>
-                    <button class="btn-success" style="width: 100%;" id="btn-sub-away">Lançar Substituição</button>
+            <div class="score" id="score-away">0</div>
+            <div class="team-block away-team">
+                <span id="name-away">VISITANTE</span>
+                <div class="color-badge-container">
+                    <div class="color-stripe" id="badge-away-c1"></div>
+                    <div class="color-stripe" id="badge-away-c2"></div>
                 </div>
             </div>
         </div>
 
-        <div class="penalty-container">
-            <h3>🏆 DISPUTA DE PÊNALTIS</h3>
-            <p style="font-size: 12px; color: var(--texto-mutado); margin: 0;">Controle direto: Clique em [G] para confirmar o Gol ou [X] para indicar o Erro.</p>
-            <div class="penalty-grid">
-                <div class="penalty-team-block">
-                    <h4 id="lbl-pen-home">Casa</h4>
-                    <div class="dots-container" id="penalty-home-dots"></div>
-                    <button style="margin-top:10px; font-size:12px; padding:5px;" id="btn-add-pen-home">+ Alternada</button>
-                </div>
-                <div class="penalty-team-block">
-                    <h4 id="lbl-pen-away">Visitante</h4>
-                    <div class="dots-container" id="penalty-away-dots"></div>
-                    <button style="margin-top:10px; font-size:12px; padding:5px;" id="btn-add-pen-away">+ Alternada</button>
-                </div>
+        <div class="time-bar">
+            <div class="timer-container">
+                <div id="timer">00:00</div>
+                <div id="extra-time">+0</div>
             </div>
+            <div id="period">1° TEMPO</div>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getDatabase, ref, set, update, onValue } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
-        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyByxKPf3WJgGDLUiPNI_QnEmgsAn0y8s3k",
@@ -624,411 +355,125 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
-        const auth = getAuth(app); // Inicializa a autenticação
 
-        let matchId = "jogo_padrao";
-        let matchListener = null;
-
-        // MODIFICADO: Lógica de Login integrada nativamente com o Firebase Auth
-        document.getElementById('btn-submit-login').addEventListener('click', efetuarLogin);
-        document.getElementById('login-password').addEventListener('keypress', (e) => {
-            if(e.key === 'Enter') efetuarLogin();
-        });
-
-        function efetuarLogin() {
-            const email = document.getElementById('login-email').value.trim();
-            const senha = document.getElementById('login-password').value;
-            const erroEl = document.getElementById('login-error');
-
-            if (!email || !senha) {
-                erroEl.textContent = "⚠️ Por favor, preencha o e-mail e a senha.";
-                erroEl.style.display = 'block';
-                return;
-            }
-
-            signInWithEmailAndPassword(auth, email, senha)
-                .then((userCredential) => {
-                    // Login bem sucedido
-                    document.getElementById('login-overlay').style.display = 'none';
-                    document.getElementById('main-content').style.display = 'block';
-                    loadMatchesList();
-                    connectToMatch();
-                })
-                .catch((error) => {
-                    // Erro ao fazer login (senha errada, usuário não existe, etc)
-                    erroEl.textContent = "⚠️ E-mail ou senha incorretos!";
-                    erroEl.style.display = 'block';
-                    document.getElementById('login-password').value = '';
-                });
-        }
-
-        const defaultState = {
-            config: {
-                home: { name: "Casa", shortName: "CAS", color1: "#3b82f6", color2: "#ffffff", coach: "", tactic: "4-4-2", players: "" },
-                away: { name: "Visitante", shortName: "VIS", color1: "#ef4444", color2: "#ffffff", coach: "", tactic: "4-4-2", players: "" },
-                design: { style: "cyber", primary: "#1e1b4b", secondary: "#0f172a", accent: "#f59e0b" }
-            },
-            stats: {
-                home: { goals: 0, shotsOn: 0, shotsOff: 0, fouls: 0, corners: 0, yellowCards: 0, redCards: 0 },
-                away: { goals: 0, shotsOn: 0, shotsOff: 0, fouls: 0, corners: 0, yellowCards: 0, redCards: 0 }
-            },
-            timer: { seconds: 0, period: "1° TEMPO", isRunning: false, injuryTime: 0, showInjury: false },
-            penalties: { home: [0,0,0,0,0], away: [0,0,0,0,0] },
-            overlays: { placar: false, lineupHome: false, lineupAway: false, substitution: false, stats: false, penalties: false, endgame: false },
-            substitution: { team: "", playerOut: "", playerIn: "", timestamp: 0 }
-        };
-
-        let localState = JSON.parse(JSON.stringify(defaultState));
-
-        const esquemas = ["4-4-2", "4-3-3", "3-5-2", "4-2-3-1", "4-1-4-1", "3-4-3", "4-5-1", "5-3-2", "5-4-1", "4-3-1-2", "4-2-2-2", "3-4-1-2", "3-4-2-1", "3-1-4-2", "4-3-2-1", "4-4-1-1", "5-2-3", "4-1-3-2", "3-4-3 Diamond", "4-2-4", "4-1-2-1-2", "3-3-3-1", "5-2-1-2", "4-2-1-3", "4-4-2 Diamond"];
-        const sHome = document.getElementById('home-tactic'); const sAway = document.getElementById('away-tactic');
-        esquemas.forEach(t => { sHome.options.add(new Option(t, t)); sAway.options.add(new Option(t, t)); });
-
-        document.getElementById('btn-toggle-config').addEventListener('click', () => {
-            const content = document.getElementById('config-content');
-            content.classList.toggle('minimized');
-            document.getElementById('status-icon').textContent = content.classList.contains('minimized') ? "▼ Clique para Expandir" : "▲ Clique para Minimizar";
-        });
-
-        function loadMatchesList() {
-            const rootMatchesRef = ref(db, 'matches');
-            onValue(rootMatchesRef, (snapshot) => {
-                const selectElement = document.getElementById('match-id-select');
-                const valAnterior = selectElement.value;
-                selectElement.innerHTML = "";
-
-                const data = snapshot.val();
-                if (data) {
-                    Object.keys(data).forEach(idKey => {
-                        const opt = new Option(idKey, idKey);
-                        selectElement.options.add(opt);
-                    });
-                    if (valAnterior && data[valAnterior]) {
-                        selectElement.value = valAnterior;
-                    }
-                } else {
-                    selectElement.options.add(new Option("jogo_padrao", "jogo_padrao"));
-                }
-            }, { onlyOnce: true });
-        }
-
-        // Substitua a sua função connectToMatch antiga por esta:
-        function connectToMatch() {
-            // 1. Verifica primeiro se há um novo jogo digitado; se não, pega o selecionado no menu drop-down
-            const selectEl = document.getElementById('match-id-select');
-            const inputNewEl = document.getElementById('match-id-new');
-            
-            let inputId = inputNewEl.value.trim();
-            if (!inputId) {
-                inputId = selectEl.value;
-            }
-
-            if (!inputId || inputId.startsWith("Carregando")) {
-                alert("Por favor, selecione ou digite um ID de partida válido.");
-                return;
-            }
-
-            matchId = inputId;
-            const matchRef = ref(db, 'matches/' + matchId);
-
-            // 2. Atualiza o nó global da partida ativa para que o OBS mude de canal sozinho
-            const activeMatchRef = ref(db, 'activeMatchId');
-            set(activeMatchRef, matchId);
-
-            // 3. Ouve os dados da partida selecionada e popula o painel
-            onValue(matchRef, (snapshot) => {
-                const data = snapshot.val();
-                if (!data) {
-                    // Se a partida for nova e não tiver dados, reseta o estado local para o padrão
-                    localState = JSON.parse(JSON.stringify(defaultState));
-                } else {
-                    localState = data;
-                }
-                updateUI();
-            });
-        }
-        document.getElementById('btn-load-match').addEventListener('click', connectToMatch);
-
-        document.getElementById('btn-clear-form').addEventListener('click', () => {
-            if(confirm("Deseja realmente limpar o painel? Isso redefinirá as informações locais para que você configure um novo jogo do zero.")) {
-                localState = JSON.parse(JSON.stringify(defaultState));
-                updateUI();
-                document.getElementById('match-id-new').value = "";
-                document.getElementById('match-id-new').placeholder = "Digite o nome da NOVA partida aqui";
-                alert("Painel limpo! Digite o nome da nova partida no campo correspondente e clique em 'Salvar Configurações'.");
-            }
-        });
-
-        document.getElementById('btn-save-config').addEventListener('click', () => {
-            localState.config.home = {
-                name: document.getElementById('home-name').value, shortName: document.getElementById('home-short-name').value.toUpperCase(),
-                color1: document.getElementById('home-color1').value, color2: document.getElementById('home-color2').value,
-                coach: document.getElementById('home-coach').value, tactic: document.getElementById('home-tactic').value, players: document.getElementById('home-players').value
-            };
-            localState.config.away = {
-                name: document.getElementById('away-name').value, shortName: document.getElementById('away-short-name').value.toUpperCase(),
-                color1: document.getElementById('away-color1').value, color2: document.getElementById('away-color2').value,
-                coach: document.getElementById('away-coach').value, tactic: document.getElementById('away-tactic').value, players: document.getElementById('away-players').value
-            };
-            localState.config.design = {
-                style: document.getElementById('overlay-style').value, primary: document.getElementById('design-color-primary').value,
-                secondary: document.getElementById('design-color-secondary').value, accent: document.getElementById('design-color-accent').value
-            };
-            
-            const newIdInput = document.getElementById('match-id-new').value.trim();
-            if (newIdInput) {
-                matchId = newIdInput;
-            }
-
-            set(ref(db, `matches/${matchId}`), localState);
-            alert(`Configurações e estados salvos com sucesso na partida: ${matchId}`);
-            connectToMatch();
-        });
-
-        window.toggleOverlay = function(overlayKey) {
-            const currentStatus = localState.overlays[overlayKey] || false;
-            update(ref(db, `matches/${matchId}/overlays`), { [overlayKey]: !currentStatus });
-        };
-
-        window.changeStat = function(team, stat, val) {
-            let newVal = (localState.stats[team][stat] || 0) + val;
-            if (newVal < 0) newVal = 0;
-            update(ref(db, `matches/${matchId}/stats/${team}`), { [stat]: newVal });
-        };
-
-        function populateSubSelects(side) {
-            const rawText = localState.config[side].players || "";
-            const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-            
-            const selectOut = document.getElementById(`select-${side}-out`);
-            const selectIn = document.getElementById(`select-${side}-in`);
-            
-            const currentOut = selectOut.value;
-            const currentIn = selectIn.value;
-
-            selectOut.innerHTML = "";
-            selectIn.innerHTML = "";
-
-            const starters = lines.slice(0, 11);
-            const subs = lines.slice(11);
-
-            if(starters.length === 0) selectOut.options.add(new Option("Sem jogadores", ""));
-            starters.forEach(p => selectOut.options.add(new Option(p, p)));
-
-            if(subs.length === 0) selectIn.options.add(new Option("Sem reservas", ""));
-            subs.forEach(p => selectIn.options.add(new Option(p, p)));
-
-            if (currentOut) selectOut.value = currentOut;
-            if (currentIn) selectIn.value = currentIn;
-        }
-
-        document.getElementById('btn-sub-home').addEventListener('click', () => {
-            const pOut = document.getElementById('select-home-out').value;
-            const pIn = document.getElementById('select-home-in').value;
-            if(!pOut || !pIn) return alert("Verifique se selecionou o titular e o reserva!");
-            
-            update(ref(db, `matches/${matchId}/substitution`), {
-                team: "home", playerOut: pOut, playerIn: pIn, timestamp: Date.now()
-            });
-            update(ref(db, `matches/${matchId}/overlays`), { substitution: true });
-        });
-
-        document.getElementById('btn-sub-away').addEventListener('click', () => {
-            const pOut = document.getElementById('select-away-out').value;
-            const pIn = document.getElementById('select-away-in').value;
-            if(!pOut || !pIn) return alert("Verifique se selecionou o titular e o reserva!");
-            
-            update(ref(db, `matches/${matchId}/substitution`), {
-                team: "away", playerOut: pOut, playerIn: pIn, timestamp: Date.now()
-            });
-            update(ref(db, `matches/${matchId}/overlays`), { substitution: true });
-        });
-
+        let currentMatchListener = null; 
+        let localSeconds = 0;
+        let isTimerRunning = false;
         let clockInterval = null;
-        function runClock() {
-            if (localState.timer.isRunning) {
+
+        // 1. ESCUTA GLOBAL PARA SABER QUAL JOGO ESTÁ ATIVO
+        const activeMatchRef = ref(db, 'activeMatchId');
+        
+        onValue(activeMatchRef, (snapshot) => {
+            const activeId = snapshot.val() || "jogo_padrao";
+            console.log("Mudança de partida detectada! Nova partida ativa:", activeId);
+            
+            // Conecta na partida ativa atual
+            const matchRef = ref(db, 'matches/' + activeId);
+            
+            // Ativa o monitoramento dos dados reais do jogo ativo
+            onValue(matchRef, (matchSnapshot) => {
+                const data = matchSnapshot.val();
+                if (!data) return;
+                
+                // Processa e renderiza o placar na tela
+                renderScoreboard(data);
+            });
+        });
+
+        function runLocalClock() {
+            if (isTimerRunning) {
                 if (!clockInterval) {
                     clockInterval = setInterval(() => {
-                        localState.timer.seconds++;
-                        document.getElementById('live-timer').textContent = formatTime(localState.timer.seconds);
-                        if (localState.timer.seconds % 3 === 0) {
-                            update(ref(db, `matches/${matchId}/timer`), { seconds: localState.timer.seconds });
-                        }
+                        localSeconds++;
+                        document.getElementById('timer').textContent = formatTime(localSeconds);
                     }, 1000);
                 }
             } else {
-                clearInterval(clockInterval); clockInterval = null;
+                clearInterval(clockInterval);
+                clockInterval = null;
             }
         }
 
-        document.getElementById('btn-start-timer').addEventListener('click', () => {
-            update(ref(db, `matches/${matchId}/timer`), { isRunning: !localState.timer.isRunning, seconds: localState.timer.seconds });
-        });
+        function updateRedCards(team, count) {
+            const container = document.getElementById(`red-cards-${team}`);
+            container.innerHTML = '';
+            const total = parseInt(count) || 0;
+            for (let i = 0; i < total; i++) {
+                const card = document.createElement('div');
+                card.className = 'red-card-icon';
+                container.appendChild(card);
+            }
+        }
 
-        document.getElementById('btn-next-period').addEventListener('click', () => {
-            update(ref(db, `matches/${matchId}/timer`), { period: localState.timer.period === "1° TEMPO" ? "2° TEMPO" : "1° TEMPO" });
-        });
+        // FUNÇÃO QUE DETÉM TODA A LÓGICA VISUAL INTACTA
+        function renderScoreboard(data) {
+            // Visibilidade do Placar
+            const wrapper = document.getElementById('scoreboard-wrapper');
+            const isVisible = data.overlays && data.overlays.placar;
+            
+            // Definição do Tema Estável
+            const design = data.config.design || { style: "cyber", primary: "#1e1b4b", secondary: "#0f172a", accent: "#f59e0b" };
+            wrapper.className = ''; 
+            if (isVisible) wrapper.classList.add('visible');
+            wrapper.classList.add(`theme-${design.style}`);
 
-        document.getElementById('btn-set-manual-time').addEventListener('click', () => {
-            const min = parseInt(document.getElementById('input-manual-min').value) || 0;
-            const seg = parseInt(document.getElementById('input-manual-seg').value) || 0;
-            update(ref(db, `matches/${matchId}/timer`), { seconds: (min * 60) + seg });
-        });
+            // Nomes e Gols
+            document.getElementById('name-home').textContent = data.config.home.shortName || "CAS";
+            document.getElementById('name-away').textContent = data.config.away.shortName || "VIS";
+            document.getElementById('score-home').textContent = data.stats.home.goals ?? 0;
+            document.getElementById('score-away').textContent = data.stats.away.goals ?? 0;
 
-        document.getElementById('input-injury-time').addEventListener('input', (e) => {
-            let val = parseInt(e.target.value);
-            if (isNaN(val) || val < 0) val = 0;
-            update(ref(db, `matches/${matchId}/timer`), { injuryTime: val });
-        });
+            // Cartões Vermelhos
+            updateRedCards('home', data.stats.home.redCards);
+            updateRedCards('away', data.stats.away.redCards);
 
-        document.getElementById('btn-toggle-injury').addEventListener('click', () => {
-            const currentShow = localState.timer.showInjury || false;
-            update(ref(db, `matches/${matchId}/timer`), { showInjury: !currentShow });
-        });
+            // Cronômetro e Período
+            document.getElementById('period').textContent = data.timer.period || "1° TEMPO";
+            
+            // Lendo dinamicamente 'injuryTime' ou 'acrescimo' do seu painel
+            let extraTimeVal = 0;
+            const hasInjuryTime = data.timer.injuryTime !== undefined;
+            const showInjury = data.timer.showInjury !== false;
 
-        window.setPenaltyStatus = function(side, idx, targetStatus) {
-            if (localState.penalties[side][idx] === targetStatus) {
-                localState.penalties[side][idx] = 0;
+            if (hasInjuryTime && showInjury) {
+                extraTimeVal = parseInt(data.timer.injuryTime) || 0;
+            } else if (data.timer.acrescimo !== undefined) {
+                extraTimeVal = parseInt(data.timer.acrescimo) || 0;
+            }
+
+            const extraTimeEl = document.getElementById('extra-time');
+            if (extraTimeVal > 0) {
+                extraTimeEl.textContent = `+${extraTimeVal}`;
+                extraTimeEl.style.setProperty('display', 'block', 'important');
             } else {
-                localState.penalties[side][idx] = targetStatus;
+                extraTimeEl.style.setProperty('display', 'none', 'important');
             }
-            update(ref(db, `matches/${matchId}/penalties`), { [side]: localState.penalties[side] });
-        };
+            
+            if (Math.abs(localSeconds - data.timer.seconds) > 2 || isTimerRunning !== data.timer.isRunning) {
+                localSeconds = data.timer.seconds || 0;
+                document.getElementById('timer').textContent = formatTime(localSeconds);
+            }
+            
+            isTimerRunning = data.timer.isRunning;
+            runLocalClock();
 
-        function renderPenaltiesUI() {
-            ['home', 'away'].forEach(side => {
-                const container = document.getElementById(`penalty-${side}-dots`);
-                container.innerHTML = '';
-                if(!localState.penalties[side]) localState.penalties[side] = [0,0,0,0,0];
-                
-                localState.penalties[side].forEach((status, idx) => {
-                    const slot = document.createElement('div');
-                    slot.className = 'penalty-slot';
+            // Cores dos Uniformes
+            document.getElementById('badge-home-c1').style.backgroundColor = data.config.home.color1 || "#3b82f6";
+            document.getElementById('badge-home-c2').style.backgroundColor = data.config.home.color2 || "#ffffff";
+            document.getElementById('badge-away-c1').style.backgroundColor = data.config.away.color1 || "#ef4444";
+            document.getElementById('badge-away-c2').style.backgroundColor = data.config.away.color2 || "#ffffff";
 
-                    const dot = document.createElement('div');
-                    dot.className = 'dot';
-                    if(status === 1) dot.classList.add('convertido');
-                    if(status === 2) dot.classList.add('desperdiçado');
-                    dot.textContent = idx + 1;
-
-                    const actions = document.createElement('div');
-                    actions.className = 'penalty-action-buttons';
-
-                    const btnGol = document.createElement('button');
-                    btnGol.className = 'btn-pen-action btn-gol' + (status === 1 ? ' active' : '');
-                    btnGol.textContent = 'G';
-                    btnGol.onclick = () => setPenaltyStatus(side, idx, 1);
-
-                    const btnErro = document.createElement('button');
-                    btnErro.className = 'btn-pen-action btn-erro' + (status === 2 ? ' active' : '');
-                    btnErro.textContent = 'X';
-                    btnErro.onclick = () => setPenaltyStatus(side, idx, 2);
-
-                    actions.appendChild(btnGol);
-                    actions.appendChild(btnErro);
-                    slot.appendChild(dot);
-                    slot.appendChild(actions);
-                    container.appendChild(slot);
-                });
-            });
+            // Injetar Variáveis de Cores
+            document.documentElement.style.setProperty('--theme-primary', design.primary);
+            document.documentElement.style.setProperty('--theme-secondary', design.secondary);
+            document.documentElement.style.setProperty('--theme-accent', design.accent);
         }
-
-        document.getElementById('btn-add-pen-home').addEventListener('click', () => {
-            localState.penalties.home.push(0); update(ref(db, `matches/${matchId}/penalties`), { home: localState.penalties.home });
-        });
-        document.getElementById('btn-add-pen-away').addEventListener('click', () => {
-            localState.penalties.away.push(0); update(ref(db, `matches/${matchId}/penalties`), { away: localState.penalties.away });
-        });
 
         function formatTime(secs) {
-            return `${Math.floor(secs / 60).toString().padStart(2, '0')}:${(secs % 60).toString().padStart(2, '0')}`;
-        }
-
-        function updateUI() {
-            document.getElementById('home-name').value = localState.config.home.name || "";
-            document.getElementById('home-short-name').value = localState.config.home.shortName || "";
-            document.getElementById('home-color1').value = localState.config.home.color1 || "#3b82f6";
-            document.getElementById('home-color2').value = localState.config.home.color2 || "#ffffff";
-            document.getElementById('home-coach').value = localState.config.home.coach || "";
-            document.getElementById('home-tactic').value = localState.config.home.tactic || "4-4-2";
-            document.getElementById('home-players').value = localState.config.home.players || "";
-
-            document.getElementById('away-name').value = localState.config.away.name || "";
-            document.getElementById('away-short-name').value = localState.config.away.shortName || "";
-            document.getElementById('away-color1').value = localState.config.away.color1 || "#ef4444";
-            document.getElementById('away-color2').value = localState.config.away.color2 || "#ffffff";
-            document.getElementById('away-coach').value = localState.config.away.coach || "";
-            document.getElementById('away-tactic').value = localState.config.away.tactic || "4-4-2";
-            document.getElementById('away-players').value = localState.config.away.players || "";
-
-            if(localState.config.design) {
-                document.getElementById('overlay-style').value = localState.config.design.style || "cyber";
-                document.getElementById('design-color-primary').value = localState.config.design.primary || "#1e1b4b";
-                document.getElementById('design-color-secondary').value = localState.config.design.secondary || "#0f172a";
-                document.getElementById('design-color-accent').value = localState.config.design.accent || "#f59e0b";
-            }
-
-            if (localState.overlays) {
-                Object.keys(localState.overlays).forEach(key => {
-                    const btn = document.getElementById(`btn-show-${key}`);
-                    const txt = document.getElementById(`status-${key}`);
-                    if (btn && txt) {
-                        btn.className = localState.overlays[key] ? 'btn-toggle-overlay active' : 'btn-toggle-overlay';
-                        txt.textContent = localState.overlays[key] ? "AO VIVO" : "OCULTO";
-                    }
-                });
-            }
-
-            document.getElementById('lbl-home-name').textContent = localState.config.home.name || "CASA";
-            document.getElementById('lbl-home-short').textContent = localState.config.home.shortName || "CAS";
-            document.getElementById('lbl-away-name').textContent = localState.config.away.name || "VISITANTE";
-            document.getElementById('lbl-away-short').textContent = localState.config.away.shortName || "VIS";
-            
-            document.getElementById('lbl-side-home').textContent = localState.config.home.name || "Casa";
-            document.getElementById('lbl-side-away').textContent = localState.config.away.name || "Visitante";
-            document.getElementById('lbl-pen-home').textContent = localState.config.home.name || "Casa";
-            document.getElementById('lbl-pen-away').textContent = localState.config.away.name || "Visitante";
-            document.getElementById('lbl-sub-home').textContent = localState.config.home.name || "Casa";
-            document.getElementById('lbl-sub-away').textContent = localState.config.away.name || "Visitante";
-
-            populateSubSelects('home');
-            populateSubSelects('away');
-
-            ['home', 'away'].forEach(side => {
-                for (const stat in localState.stats[side]) {
-                    const el = document.getElementById(`val-${side}-${stat}`);
-                    if(el) el.textContent = localState.stats[side][stat];
-                }
-            });
-            document.getElementById('lbl-home-goals').textContent = localState.stats.home.goals ?? 0;
-            document.getElementById('lbl-away-goals').textContent = localState.stats.away.goals ?? 0;
-
-            document.getElementById('live-timer').textContent = formatTime(localState.timer.seconds ?? 0);
-            document.getElementById('live-period').textContent = localState.timer.period || "1° TEMPO";
-            document.getElementById('btn-start-timer').textContent = localState.timer.isRunning ? "Pausar" : "Iniciar";
-            document.getElementById('btn-start-timer').className = localState.timer.isRunning ? "btn-danger" : "btn-success";
-
-            if(document.activeElement !== document.getElementById('input-injury-time')) {
-                document.getElementById('input-injury-time').value = localState.timer.injuryTime || 0;
-            }
-            
-            const extraDisplay = document.getElementById('live-extra-display');
-            const btnInjury = document.getElementById('btn-toggle-injury');
-            
-            extraDisplay.textContent = `+${localState.timer.injuryTime || 0}`;
-            
-            if (localState.timer.showInjury && localState.timer.injuryTime > 0) {
-                extraDisplay.style.display = 'block';
-                btnInjury.className = 'btn-success';
-                btnInjury.textContent = 'Ocultar Tela';
-            } else {
-                extraDisplay.style.display = 'none';
-                btnInjury.className = 'btn-danger';
-                btnInjury.textContent = 'Mostrar Tela';
-            }
-            
-            runClock();
-            renderPenaltiesUI();
+            const m = Math.floor(secs / 60).toString().padStart(2, '0');
+            const s = (secs % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
         }
     </script>
 </body>
