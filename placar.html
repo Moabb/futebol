@@ -209,7 +209,6 @@
             padding: 2px 5px;
             font-weight: 700;
         }
-        /* Proteção para os cartões não herdarem a inclinação distorcida do tema */
         .theme-minimal .red-card-icon {
             transform: skewX(12px);
         }
@@ -411,8 +410,16 @@
             // 5. Sincronizar Cronômetro, Período e Acréscimos
             document.getElementById('period').textContent = data.timer.period;
             
-            // CORREÇÃO DOS ACRESCIMOS: Força display block direto na propriedade elementar do DOM
-            const extraTimeVal = parseInt(data.timer.extraTime) || 0;
+            // =======================================================
+            // LEITURA ULTRA SEGURA DE ACRESCIMOS (Lê números e textos)
+            // =======================================================
+            let extraTimeVal = 0;
+            if (data.timer && data.timer.extraTime !== undefined) {
+                // Remove qualquer caractere que não seja número (ex: transforma "5 min" em "5")
+                const cleanStr = String(data.timer.extraTime).replace(/[^0-9]/g, '');
+                extraTimeVal = parseInt(cleanStr) || 0;
+            }
+
             const extraTimeEl = document.getElementById('extra-time');
             if (extraTimeVal > 0) {
                 extraTimeEl.textContent = `+${extraTimeVal}`;
@@ -420,6 +427,7 @@
             } else {
                 extraTimeEl.style.setProperty('display', 'none', 'important');
             }
+            // =======================================================
             
             if (Math.abs(localSeconds - data.timer.seconds) > 2 || isTimerRunning !== data.timer.isRunning) {
                 localSeconds = data.timer.seconds;
