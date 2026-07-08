@@ -712,37 +712,43 @@
             }, { onlyOnce: true });
         }
 
+        // Substitua a sua função connectToMatch antiga por esta:
         function connectToMatch() {
-            const newId = document.getElementById('match-id-new').value.trim();
-            if (newId) {
-                matchId = newId;
-                document.getElementById('match-id-new').value = "";
-            } else {
-                matchId = document.getElementById('match-id-select').value || "jogo_padrao";
+            const inputId = document.getElementById('match-id-input').value.trim();
+            if (!inputId) {
+                alert("Por favor, digite um ID de partida válido.");
+                return;
             }
 
-            const matchRef = ref(db, 'matches/' + matchId);
-            
-            if (matchListener) {
-                matchListener();
+            // Se o ID mudou, desconecta do nó anterior
+            if (matchId && matchId !== inputId && matchRef) {
+                // Firebase lida com a troca de listeners ao reatribuir o onValue
             }
 
-            matchListener = onValue(matchRef, (snapshot) => {
+            matchId = inputId;
+            matchRef = ref(db, 'matches/' + matchId);
+
+            // ========================================================
+            // AQUI ESTÁ A MÁGICA: Atualiza o nó global da partida ativa
+            // ========================================================
+            const activeMatchRef = ref(db, 'activeMatchId');
+            import("https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js").then(({ set }) => {
+                set(activeMatchRef, matchId);
+            });
+            // ========================================================
+
+            document.getElementById('current-match-display').textContent = matchId;
+
+            // Remove o listener antigo se houver e aplica o novo
+            onValue(matchRef, (snapshot) => {
                 const data = snapshot.val();
-                if (data) {
-                    localState = data;
-                    if (!localState.config.design) localState.config.design = { style: "cyber", primary: "#1e1b4b", secondary: "#0f172a", accent: "#f59e0b" };
-                    if (!localState.overlays) localState.overlays = { placar: false, lineupHome: false, lineupAway: false, substitution: false, stats: false, penalties: false, endgame: false };
-                    if (!localState.overlays.hasOwnProperty('substitution')) localState.overlays.substitution = false;
-                    
-                    if (!localState.timer.hasOwnProperty('injuryTime')) localState.timer.injuryTime = 0;
-                    if (!localState.timer.hasOwnProperty('showInjury')) localState.timer.showInjury = false;
-
-                    updateUI();
-                } else {
-                    set(matchRef, localState);
+                if (!data) {
+                    // Se a partida não existir, cria uma estrutura básica para não quebrar
+                    createDefaultMatchStructure();
+                    return;
                 }
-                loadMatchesList();
+                localState = data;
+                updateUI();
             });
         }
         document.getElementById('btn-load-match').addEventListener('click', connectToMatch);
