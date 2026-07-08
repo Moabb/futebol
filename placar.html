@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>1Overlay - Placar Dinâmico</title>
+    <title>Overlay - Placar Dinâmico</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Space+Grotesk:wght@500;700&family=Kanit:wght@600;800&display=swap');
 
@@ -61,7 +61,7 @@
             left: 20px; /* Alinhado acima do nome/badge do time da casa */
         }
         #red-cards-away {
-            right: 20px; /* Alinhado acima do nome/badge do time visitante */
+            right: 140px; /* Alinhado acima do nome/badge do time visitante */
         }
         
         .red-card-icon {
@@ -102,7 +102,7 @@
             border-radius: 12px;
             display: flex;
             align-items: center;
-            padding: 5px 15px;
+            padding: 12px 15px;
             box-shadow: 0 0 15px rgba(0,0,0,0.5), inset 0 0 10px rgba(255,255,255,0.05);
             backdrop-filter: blur(4px);
             position: relative;
@@ -137,18 +137,25 @@
             justify-content: center;
             min-width: 85px;
         }
+
+        #timer {
+            width: 65px;
+        }
+
         .theme-cyber #timer {
             font-family: 'Orbitron', sans-serif;
             font-size: 18px;
             color: #ffffff;
             font-weight: 700;
+            text-align: left;
         }
         .theme-cyber #extra-time {
             font-family: 'Orbitron', sans-serif;
-            font-size: 12px !important;
+            font-size: 16px !important;
+            margin-top: 3px;
         }
         .theme-cyber #period {
-            font-size: 9px;
+            font-size: 14px;
             letter-spacing: 1px;
             color: var(--theme-accent);
             font-weight: 700;
@@ -414,8 +421,8 @@
             // CORREÇÃO DEFINITIVA: Lendo a chave correta 'timer.acrescimo'
             // =============================================================
             let extraTimeVal = 0;
-            if (data.timer && data.timer.acrescimo !== undefined) {
-                const cleanStr = String(data.timer.acrescimo).replace(/[^0-9]/g, '');
+            if (data.timer && data.timer.injuryTime !== undefined) {
+                const cleanStr = String(data.timer.injuryTime).replace(/[^0-9]/g, '');
                 extraTimeVal = parseInt(cleanStr) || 0;
             }
 
