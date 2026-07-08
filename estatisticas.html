@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Overlay - Estatísticas do Jogo</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Space+Grotesk:wght@500;700&family=Kanit:wght@600;800&display=swap');
+
+        /* Configuração de transparência absoluta para o OBS Studio */
+        html, body {
+            margin: 0;
+            padding: 0;
+            background: transparent !important;
+            overflow: hidden;
+            font-family: 'Space Grotesk', sans-serif;
+            color: #ffffff;
+        }
+
+        #stats-wrapper {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -60%);
+            width: 900px;
+            padding: 30px;
+            box-sizing: border-box;
+            opacity: 0;
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            backdrop-filter: blur(10px);
+        }
+
+        #stats-wrapper.visible {
+            opacity: 1;
+            transform: translate(-50%, -50%);
+        }
+
+        /* --- CABEÇALHO DO COMPARATIVO --- */
+        .stats-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .team-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 26px;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .color-dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 2px solid #ffffff;
+            box-shadow: 0 0 8px rgba(0,0,0,0.5);
+        }
+
+        .vs-badge {
+            font-size: 14px;
+            font-weight: 700;
+            opacity: 0.6;
+            letter-spacing: 2px;
+            background: rgba(255,255,255,0.1);
+            padding: 4px 10px;
+            border-radius: 4px;
+        }
+
+        /* --- LINHAS DE ESTATÍSTICA --- */
+        .stat-row {
+            margin-bottom: 18px;
+        }
+
+        .stat-labels {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 800;
+            width: 40px;
+        }
+        .stat-value.home-val { text-align: left; }
+        .stat-value.away-val { text-align: right; }
+
+        .stat-title {
+            text-transform: uppercase;
+            font-size: 13px;
+            letter-spacing: 1px;
+            opacity: 0.8;
+            text-align: center;
+            flex-grow: 1;
+        }
+
+        /* --- BARRAS DE PROGRESSO COMPARATIVAS --- */
+        .bar-container {
+            width: 100%;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            overflow: hidden;
+            display: flex;
+        }
+
+        .bar-half {
+            width: 50%;
+            height: 100%;
+            display: flex;
+        }
+
+        .bar-home-wrapper { justify-content: flex-end; }
+        .bar-away-wrapper { justify-content: flex-start; }
+
+        .progress-bar {
+            width: 0%; /* Controlado dinamicamente via JS */
+            height: 100%;
+            transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* Card de Cartões de aviso rápido */
+        .cards-flex {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+        .mini-card {
+            width: 12px;
+            height: 18px;
+            border-radius: 2px;
+            display: inline-block;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        .mini-card.yellow { background: #f59e0b; }
+        .mini-card.red { background: #ef4444; }
+
+
+        /* ======================================================= */
+        /* INTEGRAÇÃO TOTAL COM OS TEMAS DO PAINEL                 */
+        /* ======================================================= */
+        
+        /* ESTILO 1: CYBER NEO */
+        .theme-cyber {
+            background: var(--theme-primary);
+            border: 2px solid var(--theme-accent);
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+        }
+        .theme-cyber .stat-title { color: var(--theme-accent); }
+        .theme-cyber .stat-value { font-family: 'Orbitron', sans-serif; color: #fff; }
+
+        /* ESTILO 2: ASYMMETRIC EDGE */
+        .theme-minimal { transform: skewX(-8px) translate(-50%, -60%); }
+        .theme-minimal.visible { transform: skewX(-8px) translate(-50%, -50%); }
+        .theme-minimal { background: var(--theme-primary); border-left: 8px solid var(--theme-accent); box-shadow: 10px 10px 0px rgba(0,0,0,0.3); }
+        .theme-minimal .bar-container { transform: skewX(8px); }
+        .theme-minimal span, .theme-minimal div:not(.bar-container):not(.progress-bar) { transform: skewX(8px); }
+
+        /* ESTILO 3: NEO-CLASSIC TV */
+        .theme-monolith { font-family: 'Kanit', sans-serif; background: rgba(15, 23, 42, 0.95); border-radius: 6px; box-shadow: 0 15px 35px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); }
+        .theme-monolith .stats-header { border-color: var(--theme-accent); }
+        .theme-monolith .stat-title { color: rgba(255,255,255,0.6); }
+    </style>
+</head>
+<body>
+
+    <div id="stats-wrapper" class="theme-cyber">
+        
+        <div class="stats-header">
+            <div class="team-box">
+                <div class="color-dot" id="dot-home"></div>
+                <span id="txt-home-name">CASA</span>
+            </div>
+            <div class="vs-badge">ESTATÍSTICAS</div>
+            <div class="team-box">
+                <span id="txt-away-name">VISITANTE</span>
+                <div class="color-dot" id="dot-away"></div>
+            </div>
+        </div>
+
+        <div id="stats-rows-container">
+            </div>
+
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyByxKPf3WJgGDLUiPNI_QnEmgsAn0y8s3k",
+            authDomain: "moabb-futebol.firebaseapp.com",
+            databaseURL: "https://moabb-futebol-default-rtdb.firebaseio.com",
+            projectId: "moabb-futebol",
+            storageBucket: "moabb-futebol.firebasestorage.app",
+            messagingSenderId: "154044624617",
+            appId: "1:154044624617:web:cbe332c5b1c468bd270a78"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const matchId = urlParams.get('match') || "jogo_padrao";
+
+        const matchRef = ref(db, 'matches/' + matchId);
+
+        // Mapeamento amigável dos nomes internos para exibição na TV
+        const statNames = {
+            goals: "Gols Marcados",
+            shotsOn: "Chutes no Gol",
+            shotsOff: "Chutes Para Fora",
+            fouls: "Faltas Cometidas",
+            corners: "Escanteios",
+            yellowCards: "Cartões Amarelos",
+            redCards: "Cartões Vermelhos"
+        };
+
+        onValue(matchRef, (snapshot) => {
+            const data = snapshot.val();
+            if (!data) return;
+
+            // 1. Respeitar Visibilidade do Painel (ON/OFF)
+            const wrapper = document.getElementById('stats-wrapper');
+            const isVisible = data.overlays && data.overlays.stats;
+            
+            if (!isVisible) {
+                wrapper.classList.remove('visible');
+                return;
+            }
+
+            // 2. Injetar Design e Configurações de Cores das Equipes
+            const design = data.config.design || { style: "cyber", primary: "#1e1b4b", secondary: "#0f172a", accent: "#f59e0b" };
+            document.documentElement.style.setProperty('--theme-primary', design.primary);
+            document.documentElement.style.setProperty('--theme-secondary', design.secondary);
+            document.documentElement.style.setProperty('--theme-accent', design.accent);
+
+            wrapper.className = 'visible';
+            wrapper.classList.add(`theme-${design.style}`);
+
+            const homeColor = data.config.home.color1 || "#3b82f6";
+            const awayColor = data.config.away.color1 || "#ef4444";
+
+            document.getElementById('dot-home').style.backgroundColor = homeColor;
+            document.getElementById('dot-away').style.backgroundColor = awayColor;
+            document.getElementById('txt-home-name').textContent = data.config.home.name;
+            document.getElementById('txt-away-name').textContent = data.config.away.name;
+
+            // 3. Renderizar cada linha de Estatística calculando as porcentagens das barras
+            const container = document.getElementById('stats-rows-container');
+            container.innerHTML = '';
+
+            Object.keys(statNames).forEach(key => {
+                const homeVal = data.stats.home[key] || 0;
+                const awayVal = data.stats.away[key] || 0;
+
+                // Evita divisão por zero se ambos estiverem zerados
+                const total = homeVal + awayVal;
+                let homePercent = 0;
+                let awayPercent = 0;
+
+                if (total > 0) {
+                    homePercent = (homeVal / total) * 100;
+                    awayPercent = (awayVal / total) * 100;
+                }
+
+                // Customização extra se a métrica for cartões (adiciona o quadradinho do cartão visual)
+                let extraLabelHome = "";
+                let extraLabelAway = "";
+                if(key === 'yellowCards') {
+                    extraLabelHome = `<div class="mini-card yellow"></div> `;
+                    extraLabelAway = ` <div class="mini-card yellow"></div>`;
+                } else if(key === 'redCards') {
+                    extraLabelHome = `<div class="mini-card red"></div> `;
+                    extraLabelAway = ` <div class="mini-card red"></div>`;
+                }
+
+                const row = document.createElement('div');
+                row.className = 'stat-row';
+                row.innerHTML = `
+                    <div class="stat-labels">
+                        <div class="stat-value home-val">${extraLabelHome}${homeVal}</div>
+                        <div class="stat-title">${statNames[key]}</div>
+                        <div class="stat-value away-val">${awayVal}${extraLabelAway}</div>
+                    </div>
+                    <div class="bar-container">
+                        <div class="bar-half bar-home-wrapper">
+                            <div class="progress-bar" style="width: ${homePercent}%; background-color: ${homeColor}; border-radius: 5px 0 0 5px;"></div>
+                        </div>
+                        <div class="bar-half bar-away-wrapper">
+                            <div class="progress-bar" style="width: ${awayPercent}%; background-color: ${awayColor}; border-radius: 0 5px 5px 0;"></div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+        });
+    </script>
+</body>
+</html>

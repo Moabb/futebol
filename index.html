@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Controle - Transmissão de Futebol</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+
+        :root {
+            --bg-principal: #0f172a;
+            --bg-card: #1e293b;
+            --bg-input: #334155;
+            --texto: #f8fafc;
+            --texto-mutado: #94a3b8;
+            --primaria: #3b82f6;
+            --sucesso: #10b981;
+            --perigo: #ef4444;
+            --alerta: #f59e0b;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-principal);
+            color: var(--texto);
+            font-family: 'Inter', sans-serif;
+            box-sizing: border-box;
+        }
+
+        *, *:before, *:after { box-sizing: inherit; }
+
+        h1, h2, h3 { margin: 0; padding-bottom: 10px; }
+
+        .collapsible-container {
+            background: var(--bg-card);
+            border-radius: 8px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            border: 1px solid #475569;
+        }
+
+        .collapsible-header {
+            background: #111827;
+            padding: 15px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+
+        .collapsible-header h2 { padding: 0; font-size: 18px; color: var(--primaria); }
+
+        .collapsible-content {
+            padding: 20px;
+            display: block;
+        }
+
+        .collapsible-content.minimized { display: none; }
+
+        .grid-config {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-size: 12px;
+            color: var(--texto-mutado);
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        input, select, textarea {
+            background: var(--bg-input);
+            border: 1px solid #475569;
+            color: var(--texto);
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        input[type="color"] {
+            padding: 0;
+            width: 100%;
+            height: 40px;
+            border: 1px solid #475569;
+            border-radius: 6px;
+            cursor: pointer;
+            background: none;
+        }
+        ::-webkit-color-swatch-wrapper { padding: 0; }
+        ::-webkit-color-swatch { border: none; border-radius: 5px; }
+
+        .color-pickers {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            background: var(--primaria);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        button:hover { opacity: 0.9; }
+        .btn-success { background: var(--sucesso); }
+        .btn-danger { background: var(--perigo); }
+
+        .live-container {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 1024px) {
+            .live-container { grid-template-columns: 1fr; }
+        }
+
+        .card {
+            background: var(--bg-card);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #475569;
+        }
+
+        .timer-center {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .display-tempo {
+            font-size: 48px;
+            font-family: monospace;
+            font-weight: 800;
+            margin: 10px 0;
+            color: var(--sucesso);
+        }
+        .timer-controls { display: flex; gap: 10px; margin-bottom: 15px; }
+        .manual-time { display: flex; gap: 5px; max-width: 200px; }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #334155;
+        }
+        .stat-actions { display: flex; gap: 5px; }
+        .stat-value {
+            font-size: 18px;
+            font-weight: 800;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .live-score-board {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            background: #111827;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        .live-team-name { font-size: 20px; font-weight: 800; }
+        .live-score-number { font-size: 36px; font-weight: 900; color: var(--primaria); }
+
+        .penalty-container {
+            background: var(--bg-card);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #475569;
+            margin-bottom: 20px;
+        }
+        .penalty-grid {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+            gap: 20px;
+        }
+        .penalty-team-block { flex: 1; }
+        .dots-container {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .dot {
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            background: #475569;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+        }
+        .dot.convertido { background: var(--sucesso); color: white; }
+        .dot.desperdiçado { background: var(--perigo); color: white; }
+
+        /* Estilos Dinâmicos de Substituição */
+        .sub-flex-container {
+            display: flex;
+            gap: 20px;
+            margin-top: 10px;
+        }
+        .sub-box {
+            flex: 1;
+            background: #111827;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #334155;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .sub-select-group {
+            display: flex;
+            gap: 10px;
+        }
+        .sub-field {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .sub-field label {
+            font-size: 11px;
+            color: var(--texto-mutado);
+            margin-bottom: 3px;
+        }
+        .sub-field select {
+            width: 100%;
+        }
+
+        .overlay-control-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .btn-toggle-overlay {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 15px;
+            font-size: 14px;
+            border-radius: 6px;
+            background: #334155;
+            border: 2px solid transparent;
+            text-transform: uppercase;
+        }
+        .btn-toggle-overlay .status-text {
+            font-size: 11px;
+            margin-top: 5px;
+            font-weight: 400;
+            opacity: 0.7;
+        }
+        .btn-toggle-overlay.active {
+            background: var(--sucesso);
+            border-color: #fff;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="collapsible-container">
+        <div class="collapsible-header" id="btn-toggle-config">
+            <h2>⚙️ PARTE 1: CONFIGURAÇÃO DO JOGO, ESCALAÇÕES & DESIGN</h2>
+            <span id="status-icon">▲ Clique para Minimizar</span>
+        </div>
+        <div class="collapsible-content" id="config-content">
+            
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; background: #111827; padding: 15px; border-radius: 6px;">
+                <div class="form-group" style="margin:0; flex: 1;">
+                    <input type="text" id="match-id" value="jogo_padrao" placeholder="ID da Partida no Firebase (ex: jogo_hoje)">
+                </div>
+                <button id="btn-load-match">Conectar e Carregar Jogo</button>
+            </div>
+
+            <div class="grid-config">
+                <div style="background: rgba(255,255,255,0.02); padding: 15px; border-radius: 6px;">
+                    <h3>🏠 TIME DA CASA</h3>
+                    <div class="form-group">
+                        <label>Nome do Time</label>
+                        <input type="text" id="home-name" value="Casa">
+                    </div>
+                    <div class="form-group">
+                        <label>Nome Reduzido (Ex: CRU)</label>
+                        <input type="text" id="home-short-name" value="CAS" maxlength="5">
+                    </div>
+                    <div class="form-group">
+                        <label>Cores do Uniforme</label>
+                        <div class="color-pickers">
+                            <input type="color" id="home-color1" value="#3b82f6">
+                            <input type="color" id="home-color2" value="#ffffff">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Técnico</label>
+                        <input type="text" id="home-coach" value="">
+                    </div>
+                    <div class="form-group">
+                        <label>Esquema Tático</label>
+                        <select id="home-tactic"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Jogadores (1 por linha - Primeiros 11 são Titulares)</label>
+                        <textarea id="home-players" rows="6" placeholder="1 - Goleiro&#10;2 - Lateral..."></textarea>
+                    </div>
+                </div>
+
+                <div style="background: rgba(255,255,255,0.02); padding: 15px; border-radius: 6px;">
+                    <h3>✈️ TIME VISITANTE</h3>
+                    <div class="form-group">
+                        <label>Nome do Time</label>
+                        <input type="text" id="away-name" value="Visitante">
+                    </div>
+                    <div class="form-group">
+                        <label>Nome Reduzido (Ex: AMG)</label>
+                        <input type="text" id="away-short-name" value="VIS" maxlength="5">
+                    </div>
+                    <div class="form-group">
+                        <label>Cores do Uniforme</label>
+                        <div class="color-pickers">
+                            <input type="color" id="away-color1" value="#ef4444">
+                            <input type="color" id="away-color2" value="#ffffff">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Técnico</label>
+                        <input type="text" id="away-coach" value="">
+                    </div>
+                    <div class="form-group">
+                        <label>Esquema Tático</label>
+                        <select id="away-tactic"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Jogadores (1 por linha - Primeiros 11 são Titulares)</label>
+                        <textarea id="away-players" rows="6" placeholder="1 - Goleiro&#10;2 - Lateral..."></textarea>
+                    </div>
+                </div>
+
+                <div style="background: rgba(59, 130, 246, 0.05); padding: 15px; border-radius: 6px; border: 1px dashed var(--primaria);">
+                    <h3>🎨 DESIGN DAS OVERLAYS</h3>
+                    
+                    <div class="form-group">
+                        <label>Estilo Visual do Placar</label>
+                        <select id="overlay-style">
+                            <option value="cyber">Cyber Neo (Futurista & Fluido)</option>
+                            <option value="minimal">Asymmetric Edge (Sofisticado & Elegante)</option>
+                            <option value="monolith">Solid Monolith (Imponente & Brutalista)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Cor Principal</label>
+                        <input type="color" id="design-color-primary" value="#1e1b4b">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Cor Secundária</label>
+                        <input type="color" id="design-color-secondary" value="#0f172a">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Cor de Destaque / Accent</label>
+                        <input type="color" id="design-color-accent" value="#f59e0b">
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 15px; text-align: right;">
+                <button id="btn-save-config" class="btn-success">💾 Salvar Configurações</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-bottom: 20px; border-color: var(--primaria);">
+        <h3 style="color: var(--primaria); font-size: 18px; padding-bottom: 5px;">🎬 CONTROLE DE TELAS (ON / OFF NO OBS)</h3>
+        
+        <div class="overlay-control-grid">
+            <button class="btn-toggle-overlay" id="btn-show-placar" onclick="toggleOverlay('placar')">⏱️ Placar do Jogo <span class="status-text" id="status-placar">Desligado</span></button>
+            <button class="btn-toggle-overlay" id="btn-show-lineupHome" onclick="toggleOverlay('lineupHome')">🏠 Escalação Casa <span class="status-text" id="status-lineupHome">Desligado</span></button>
+            <button class="btn-toggle-overlay" id="btn-show-lineupAway" onclick="toggleOverlay('lineupAway')">✈️ Escalação Visitante <span class="status-text" id="status-lineupAway">Desligado</span></button>
+            <button class="btn-toggle-overlay" id="btn-show-substitution" onclick="toggleOverlay('substitution')">⇄ Gráfico Substituição <span class="status-text" id="status-substitution">Desligado</span></button>
+            <button class="btn-toggle-overlay" id="btn-show-stats" onclick="toggleOverlay('stats')">📊 Estatísticas <span class="status-text" id="status-stats">Desligado</span></button>
+            <button class="btn-toggle-overlay" id="btn-show-penalties" onclick="toggleOverlay('penalties')">🏆 Placar Pênaltis <span class="status-text" id="status-penalties">Desligado</span></button>
+            <button class="btn-toggle-overlay" id="btn-show-endgame" onclick="toggleOverlay('endgame')">🏁 Fim de Jogo <span class="status-text" id="status-endgame">Desligado</span></button>
+        </div>
+    </div>
+
+    <h2 style="color: var(--sucesso); font-size: 20px; margin-bottom: 10px;">🔴 PLACAR EM TEMPO REAL</h2>
+    
+    <div class="live-score-board">
+        <div class="live-team-name"><span id="lbl-home-name">CASA</span> (<span id="lbl-home-short" style="color:var(--texto-mutado);">CAS</span>)</div>
+        <div class="live-score-number" id="lbl-home-goals">0</div>
+        <div style="font-size: 24px; color: var(--texto-mutado);">X</div>
+        <div class="live-score-number" id="lbl-away-goals">0</div>
+        <div class="live-team-name"><span id="lbl-away-name">VISITANTE</span> (<span id="lbl-away-short" style="color:var(--texto-mutado);">VIS</span>)</div>
+    </div>
+
+    <div class="live-container">
+        <!-- Stats Casa -->
+        <div class="card">
+            <h3>Estatísticas: <span id="lbl-side-home">Casa</span></h3>
+            <hr style="border-color: #334155; margin-bottom: 15px;">
+            <div class="stat-row"><span>Gols</span><div class="stat-actions"><button onclick="changeStat('home', 'goals', -1)">-</button><span class="stat-value" id="val-home-goals">0</span><button class="btn-success" onclick="changeStat('home', 'goals', 1)">+</button></div></div>
+            <div class="stat-row"><span>Chutes no Gol</span><div class="stat-actions"><button onclick="changeStat('home', 'shotsOn', -1)">-</button><span class="stat-value" id="val-home-shotsOn">0</span><button onclick="changeStat('home', 'shotsOn', 1)">+</button></div></div>
+            <div class="stat-row"><span>Chutes Fora</span><div class="stat-actions"><button onclick="changeStat('home', 'shotsOff', -1)">-</button><span class="stat-value" id="val-home-shotsOff">0</span><button onclick="changeStat('home', 'shotsOff', 1)">+</button></div></div>
+            <div class="stat-row"><span>Faltas</span><div class="stat-actions"><button onclick="changeStat('home', 'fouls', -1)">-</button><span class="stat-value" id="val-home-fouls">0</span><button onclick="changeStat('home', 'fouls', 1)">+</button></div></div>
+            <div class="stat-row"><span>Escanteios</span><div class="stat-actions"><button onclick="changeStat('home', 'corners', -1)">-</button><span class="stat-value" id="val-home-corners">0</span><button onclick="changeStat('home', 'corners', 1)">+</button></div></div>
+            <div class="stat-row"><span>C. Amarelo</span><div class="stat-actions"><button onclick="changeStat('home', 'yellowCards', -1)">-</button><span class="stat-value" id="val-home-yellowCards">0</span><button style="background:var(--alerta)" onclick="changeStat('home', 'yellowCards', 1)">+</button></div></div>
+            <div class="stat-row"><span>C. Vermelho</span><div class="stat-actions"><button onclick="changeStat('home', 'redCards', -1)">-</button><span class="stat-value" id="val-home-redCards">0</span><button style="background:var(--perigo)" onclick="changeStat('home', 'redCards', 1)">+</button></div></div>
+        </div>
+
+        <!-- Cronômetro -->
+        <div class="card timer-center">
+            <h3>CRONÔMETRO</h3>
+            <div class="display-tempo" id="live-timer">00:00</div>
+            <div id="live-period" style="font-weight: bold; color: var(--texto-mutado); margin-bottom: 10px;">1° TEMPO</div>
+            <div class="timer-controls">
+                <button id="btn-start-timer" class="btn-success">Iniciar / Pausar</button>
+                <button id="btn-next-period" style="background: var(--alerta);">Mudar Período</button>
+            </div>
+            <div class="manual-time">
+                <input type="number" id="input-manual-min" placeholder="Min" min="0" style="width: 70px;">
+                <input type="number" id="input-manual-seg" placeholder="Seg" min="0" max="59" style="width: 70px;">
+                <button id="btn-set-manual-time">Editar</button>
+            </div>
+        </div>
+
+        <!-- Stats Visitante -->
+        <div class="card">
+            <h3>Estatísticas: <span id="lbl-side-away">Visitante</span></h3>
+            <hr style="border-color: #334155; margin-bottom: 15px;">
+            <div class="stat-row"><span>Gols</span><div class="stat-actions"><button onclick="changeStat('away', 'goals', -1)">-</button><span class="stat-value" id="val-away-goals">0</span><button class="btn-success" onclick="changeStat('away', 'goals', 1)">+</button></div></div>
+            <div class="stat-row"><span>Chutes no Gol</span><div class="stat-actions"><button onclick="changeStat('away', 'shotsOn', -1)">-</button><span class="stat-value" id="val-away-shotsOn">0</span><button onclick="changeStat('away', 'shotsOn', 1)">+</button></div></div>
+            <div class="stat-row"><span>Chutes Fora</span><div class="stat-actions"><button onclick="changeStat('away', 'shotsOff', -1)">-</button><span class="stat-value" id="val-away-shotsOff">0</span><button onclick="changeStat('away', 'shotsOff', 1)">+</button></div></div>
+            <div class="stat-row"><span>Faltas</span><div class="stat-actions"><button onclick="changeStat('away', 'fouls', -1)">-</button><span class="stat-value" id="val-away-fouls">0</span><button onclick="changeStat('away', 'fouls', 1)">+</button></div></div>
+            <div class="stat-row"><span>Escanteios</span><div class="stat-actions"><button onclick="changeStat('away', 'corners', -1)">-</button><span class="stat-value" id="val-away-corners">0</span><button onclick="changeStat('away', 'corners', 1)">+</button></div></div>
+            <div class="stat-row"><span>C. Amarelo</span><div class="stat-actions"><button onclick="changeStat('away', 'yellowCards', -1)">-</button><span class="stat-value" id="val-away-yellowCards">0</span><button style="background:var(--alerta)" onclick="changeStat('away', 'yellowCards', 1)">+</button></div></div>
+            <div class="stat-row"><span>C. Vermelho</span><div class="stat-actions"><button onclick="changeStat('away', 'redCards', -1)">-</button><span class="stat-value" id="val-away-redCards">0</span><button style="background:var(--perigo)" onclick="changeStat('away', 'redCards', 1)">+</button></div></div>
+        </div>
+    </div>
+
+    <!-- SEÇÃO DE SUBSTITUIÇÃO INTELIGENTE (DINÂMICA) -->
+    <div class="card" style="margin-bottom: 20px; border-color: var(--alerta);">
+        <h3 style="color: var(--alerta);">⇄ EFETUAR SUBSTITUIÇÕES DE JOGADORES (DINÂMICO)</h3>
+        <p style="font-size: 12px; color: var(--texto-mutado); margin: 0 0 10px 0;">Os seletores se baseiam na lista inserida nas configurações lá em cima (Linhas 1-11 são titulares, o resto reserva).</p>
+        
+        <div class="sub-flex-container">
+            <!-- Casa -->
+            <div class="sub-box">
+                <h4 style="margin: 0; color: #fff;" id="lbl-sub-home">Casa</h4>
+                <div class="sub-select-group">
+                    <div class="sub-field">
+                        <label>Saindo (Titular)</label>
+                        <select id="select-home-out"><option value="">Carregando...</option></select>
+                    </div>
+                    <div class="sub-field">
+                        <label>Entrando (Reserva)</label>
+                        <select id="select-home-in"><option value="">Carregando...</option></select>
+                    </div>
+                </div>
+                <button class="btn-success" style="width: 100%;" id="btn-sub-home">Lançar Substituição</button>
+            </div>
+            <!-- Visitante -->
+            <div class="sub-box">
+                <h4 style="margin: 0; color: #fff;" id="lbl-sub-away">Visitante</h4>
+                <div class="sub-select-group">
+                    <div class="sub-field">
+                        <label>Saindo (Titular)</label>
+                        <select id="select-away-out"><option value="">Carregando...</option></select>
+                    </div>
+                    <div class="sub-field">
+                        <label>Entrando (Reserva)</label>
+                        <select id="select-away-in"><option value="">Carregando...</option></select>
+                    </div>
+                </div>
+                <button class="btn-success" style="width: 100%;" id="btn-sub-away">Lançar Substituição</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="penalty-container">
+        <h3>🏆 DISPUTA DE PÊNALTIS</h3>
+        <p style="font-size: 12px; color: var(--texto-mutado); margin: 0;">Clique nas bolinhas: Cinza (Pendente), Verde (Gol), Vermelho (Perdeu).</p>
+        <div class="penalty-grid">
+            <div class="penalty-team-block">
+                <h4 id="lbl-pen-home">Casa</h4>
+                <div class="dots-container" id="penalty-home-dots"></div>
+                <button style="margin-top:10px; font-size:12px; padding:5px;" id="btn-add-pen-home">+ Alternada</button>
+            </div>
+            <div class="penalty-team-block">
+                <h4 id="lbl-pen-away">Visitante</h4>
+                <div class="dots-container" id="penalty-away-dots"></div>
+                <button style="margin-top:10px; font-size:12px; padding:5px;" id="btn-add-pen-away">+ Alternada</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getDatabase, ref, set, update, onValue } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyByxKPf3WJgGDLUiPNI_QnEmgsAn0y8s3k",
+            authDomain: "moabb-futebol.firebaseapp.com",
+            databaseURL: "https://moabb-futebol-default-rtdb.firebaseio.com",
+            projectId: "moabb-futebol",
+            storageBucket: "moabb-futebol.firebasestorage.app",
+            messagingSenderId: "154044624617",
+            appId: "1:154044624617:web:cbe332c5b1c468bd270a78"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        let matchId = "jogo_padrao";
+        let localState = {
+            config: {
+                home: { name: "Casa", shortName: "CAS", color1: "#3b82f6", color2: "#ffffff", coach: "", tactic: "4-4-2", players: "" },
+                away: { name: "Visitante", shortName: "VIS", color1: "#ef4444", color2: "#ffffff", coach: "", tactic: "4-4-2", players: "" },
+                design: { style: "cyber", primary: "#1e1b4b", secondary: "#0f172a", accent: "#f59e0b" }
+            },
+            stats: {
+                home: { goals: 0, shotsOn: 0, shotsOff: 0, fouls: 0, corners: 0, yellowCards: 0, redCards: 0 },
+                away: { goals: 0, shotsOn: 0, shotsOff: 0, fouls: 0, corners: 0, yellowCards: 0, redCards: 0 }
+            },
+            timer: { seconds: 0, period: "1° TEMPO", isRunning: false },
+            penalties: { home: [0,0,0,0,0], away: [0,0,0,0,0] },
+            overlays: { placar: false, lineupHome: false, lineupAway: false, substitution: false, stats: false, penalties: false, endgame: false },
+            substitution: { team: "", playerOut: "", playerIn: "", timestamp: 0 }
+        };
+
+        const esquemas = ["4-4-2", "4-3-3", "3-5-2", "4-2-3-1", "4-1-4-1", "3-4-3", "4-5-1", "5-3-2", "5-4-1", "4-3-1-2", "4-2-2-2", "3-4-1-2", "3-4-2-1", "3-1-4-2", "4-3-2-1", "4-4-1-1", "5-2-3", "4-1-3-2", "3-4-3 Diamond", "4-2-4", "4-1-2-1-2", "3-3-3-1", "5-2-1-2", "4-2-1-3", "4-4-2 Diamond"];
+        const sHome = document.getElementById('home-tactic'); const sAway = document.getElementById('away-tactic');
+        esquemas.forEach(t => { sHome.options.add(new Option(t, t)); sAway.options.add(new Option(t, t)); });
+
+        document.getElementById('btn-toggle-config').addEventListener('click', () => {
+            const content = document.getElementById('config-content');
+            content.classList.toggle('minimized');
+            document.getElementById('status-icon').textContent = content.classList.contains('minimized') ? "▼ Clique para Expandir" : "▲ Clique para Minimizar";
+        });
+
+        function connectToMatch() {
+            matchId = document.getElementById('match-id').value.trim() || "jogo_padrao";
+            const matchRef = ref(db, 'matches/' + matchId);
+            
+            onValue(matchRef, (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    localState = data;
+                    if (!localState.config.design) localState.config.design = { style: "cyber", primary: "#1e1b4b", secondary: "#0f172a", accent: "#f59e0b" };
+                    if (!localState.overlays) localState.overlays = { placar: false, lineupHome: false, lineupAway: false, substitution: false, stats: false, penalties: false, endgame: false };
+                    if (!localState.overlays.hasOwnProperty('substitution')) localState.overlays.substitution = false;
+                    updateUI();
+                } else {
+                    set(matchRef, localState);
+                }
+            });
+        }
+        document.getElementById('btn-load-match').addEventListener('click', connectToMatch);
+
+        document.getElementById('btn-save-config').addEventListener('click', () => {
+            localState.config.home = {
+                name: document.getElementById('home-name').value, shortName: document.getElementById('home-short-name').value.toUpperCase(),
+                color1: document.getElementById('home-color1').value, color2: document.getElementById('home-color2').value,
+                coach: document.getElementById('home-coach').value, tactic: document.getElementById('home-tactic').value, players: document.getElementById('home-players').value
+            };
+            localState.config.away = {
+                name: document.getElementById('away-name').value, shortName: document.getElementById('away-short-name').value.toUpperCase(),
+                color1: document.getElementById('away-color1').value, color2: document.getElementById('away-color2').value,
+                coach: document.getElementById('away-coach').value, tactic: document.getElementById('away-tactic').value, players: document.getElementById('away-players').value
+            };
+            localState.config.design = {
+                style: document.getElementById('overlay-style').value, primary: document.getElementById('design-color-primary').value,
+                secondary: document.getElementById('design-color-secondary').value, accent: document.getElementById('design-color-accent').value
+            };
+            update(ref(db, `matches/${matchId}/config`), localState.config);
+            alert("Configurações salvas no Firebase!");
+        });
+
+        window.toggleOverlay = function(overlayKey) {
+            const currentStatus = localState.overlays[overlayKey] || false;
+            update(ref(db, `matches/${matchId}/overlays`), { [overlayKey]: !currentStatus });
+        };
+
+        window.changeStat = function(team, stat, val) {
+            let newVal = (localState.stats[team][stat] || 0) + val;
+            if (newVal < 0) newVal = 0;
+            update(ref(db, `matches/${matchId}/stats/${team}`), { [stat]: newVal });
+        };
+
+        // Função utilitária para quebrar o texto e preencher os seletores
+        function populateSubSelects(side) {
+            const rawText = localState.config[side].players || "";
+            const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            
+            const selectOut = document.getElementById(`select-${side}-out`);
+            const selectIn = document.getElementById(`select-${side}-in`);
+            
+            selectOut.innerHTML = "";
+            selectIn.innerHTML = "";
+
+            // Primeiros 11 são titulares (Quem sai)
+            const starters = lines.slice(0, 11);
+            // Resto são reservas (Quem entra)
+            const subs = lines.slice(11);
+
+            if(starters.length === 0) selectOut.options.add(new Option("Sem jogadores salvos", ""));
+            starters.forEach(p => selectOut.options.add(new Option(p, p)));
+
+            if(subs.length === 0) selectIn.options.add(new Option("Sem reservas salvos", ""));
+            subs.forEach(p => selectIn.options.add(new Option(p, p)));
+        }
+
+        // Envio dinâmico baseado na seleção
+        document.getElementById('btn-sub-home').addEventListener('click', () => {
+            const pOut = document.getElementById('select-home-out').value;
+            const pIn = document.getElementById('select-home-in').value;
+            if(!pOut || !pIn) return alert("Verifique se selecionou o titular e o reserva!");
+            
+            update(ref(db, `matches/${matchId}/substitution`), {
+                team: "home", playerOut: pOut, playerIn: pIn, timestamp: Date.now()
+            });
+            update(ref(db, `matches/${matchId}/overlays`), { substitution: true });
+        });
+
+        document.getElementById('btn-sub-away').addEventListener('click', () => {
+            const pOut = document.getElementById('select-away-out').value;
+            const pIn = document.getElementById('select-away-in').value;
+            if(!pOut || !pIn) return alert("Verifique se selecionou o titular e o reserva!");
+            
+            update(ref(db, `matches/${matchId}/substitution`), {
+                team: "away", playerOut: pOut, playerIn: pIn, timestamp: Date.now()
+            });
+            update(ref(db, `matches/${matchId}/overlays`), { substitution: true });
+        });
+
+        let clockInterval = null;
+        function runClock() {
+            if (localState.timer.isRunning) {
+                if (!clockInterval) {
+                    clockInterval = setInterval(() => {
+                        localState.timer.seconds++;
+                        document.getElementById('live-timer').textContent = formatTime(localState.timer.seconds);
+                        if (localState.timer.seconds % 3 === 0) {
+                            update(ref(db, `matches/${matchId}/timer`), { seconds: localState.timer.seconds });
+                        }
+                    }, 1000);
+                }
+            } else {
+                clearInterval(clockInterval); clockInterval = null;
+            }
+        }
+
+        document.getElementById('btn-start-timer').addEventListener('click', () => {
+            update(ref(db, `matches/${matchId}/timer`), { isRunning: !localState.timer.isRunning, seconds: localState.timer.seconds });
+        });
+
+        document.getElementById('btn-next-period').addEventListener('click', () => {
+            update(ref(db, `matches/${matchId}/timer`), { period: localState.timer.period === "1° TEMPO" ? "2° TEMPO" : "1° TEMPO" });
+        });
+
+        document.getElementById('btn-set-manual-time').addEventListener('click', () => {
+            const min = parseInt(document.getElementById('input-manual-min').value) || 0;
+            const seg = parseInt(document.getElementById('input-manual-seg').value) || 0;
+            update(ref(db, `matches/${matchId}/timer`), { seconds: (min * 60) + seg });
+        });
+
+        function renderPenaltiesUI() {
+            ['home', 'away'].forEach(side => {
+                const container = document.getElementById(`penalty-${side}-dots`);
+                container.innerHTML = '';
+                if(!localState.penalties[side]) localState.penalties[side] = [0,0,0,0,0];
+                
+                localState.penalties[side].forEach((status, idx) => {
+                    const dot = document.createElement('div');
+                    dot.className = 'dot';
+                    if(status === 1) dot.classList.add('convertido');
+                    if(status === 2) dot.classList.add('desperdiçado');
+                    dot.textContent = idx + 1;
+                    dot.onclick = () => {
+                        localState.penalties[side][idx] = (localState.penalties[side][idx] + 1) % 3;
+                        update(ref(db, `matches/${matchId}/penalties`), { [side]: localState.penalties[side] });
+                    };
+                    container.appendChild(dot);
+                });
+            });
+        }
+
+        document.getElementById('btn-add-pen-home').addEventListener('click', () => {
+            localState.penalties.home.push(0); update(ref(db, `matches/${matchId}/penalties`), { home: localState.penalties.home });
+        });
+        document.getElementById('btn-add-pen-away').addEventListener('click', () => {
+            localState.penalties.away.push(0); update(ref(db, `matches/${matchId}/penalties`), { away: localState.penalties.away });
+        });
+
+        function formatTime(secs) {
+            return `${Math.floor(secs / 60).toString().padStart(2, '0')}:${(secs % 60).toString().padStart(2, '0')}`;
+        }
+
+        function updateUI() {
+            document.getElementById('home-name').value = localState.config.home.name;
+            document.getElementById('home-short-name').value = localState.config.home.shortName || "CAS";
+            document.getElementById('home-color1').value = localState.config.home.color1;
+            document.getElementById('home-color2').value = localState.config.home.color2;
+            document.getElementById('home-coach').value = localState.config.home.coach;
+            document.getElementById('home-tactic').value = localState.config.home.tactic;
+            document.getElementById('home-players').value = localState.config.home.players;
+
+            document.getElementById('away-name').value = localState.config.away.name;
+            document.getElementById('away-short-name').value = localState.config.away.shortName || "VIS";
+            document.getElementById('away-color1').value = localState.config.away.color1;
+            document.getElementById('away-color2').value = localState.config.away.color2;
+            document.getElementById('away-coach').value = localState.config.away.coach;
+            document.getElementById('away-tactic').value = localState.config.away.tactic;
+            document.getElementById('away-players').value = localState.config.away.players;
+
+            if(localState.config.design) {
+                document.getElementById('overlay-style').value = localState.config.design.style || "cyber";
+                document.getElementById('design-color-primary').value = localState.config.design.primary || "#1e1b4b";
+                document.getElementById('design-color-secondary').value = localState.config.design.secondary || "#0f172a";
+                document.getElementById('design-color-accent').value = localState.config.design.accent || "#f59e0b";
+            }
+
+            if (localState.overlays) {
+                Object.keys(localState.overlays).forEach(key => {
+                    const btn = document.getElementById(`btn-show-${key}`);
+                    const txt = document.getElementById(`status-${key}`);
+                    if (btn && txt) {
+                        btn.className = localState.overlays[key] ? 'btn-toggle-overlay active' : 'btn-toggle-overlay';
+                        txt.textContent = localState.overlays[key] ? "AO VIVO" : "OCULTO";
+                    }
+                });
+            }
+
+            document.getElementById('lbl-home-name').textContent = localState.config.home.name;
+            document.getElementById('lbl-home-short').textContent = localState.config.home.shortName || "CAS";
+            document.getElementById('lbl-away-name').textContent = localState.config.away.name;
+            document.getElementById('lbl-away-short').textContent = localState.config.away.shortName || "VIS";
+            
+            document.getElementById('lbl-side-home').textContent = localState.config.home.name;
+            document.getElementById('lbl-side-away').textContent = localState.config.away.name;
+            document.getElementById('lbl-pen-home').textContent = localState.config.home.name;
+            document.getElementById('lbl-pen-away').textContent = localState.config.away.name;
+            document.getElementById('lbl-sub-home').textContent = localState.config.home.name;
+            document.getElementById('lbl-sub-away').textContent = localState.config.away.name;
+
+            // Atualiza os seletores dinâmicos de substituição com a lista atualizada
+            populateSubSelects('home');
+            populateSubSelects('away');
+
+            ['home', 'away'].forEach(side => {
+                for (const stat in localState.stats[side]) {
+                    const el = document.getElementById(`val-${side}-${stat}`);
+                    if(el) el.textContent = localState.stats[side][stat];
+                }
+            });
+            document.getElementById('lbl-home-goals').textContent = localState.stats.home.goals;
+            document.getElementById('lbl-away-goals').textContent = localState.stats.away.goals;
+
+            document.getElementById('live-timer').textContent = formatTime(localState.timer.seconds);
+            document.getElementById('live-period').textContent = localState.timer.period;
+            document.getElementById('btn-start-timer').textContent = localState.timer.isRunning ? "Pausar" : "Iniciar";
+            document.getElementById('btn-start-timer').className = localState.timer.isRunning ? "btn-danger" : "btn-success";
+            
+            runClock();
+            renderPenaltiesUI();
+        }
+
+        connectToMatch();
+    </script>
+</body>
+</html>

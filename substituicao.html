@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Overlay - Substituição</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: transparent;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+            width: 1920px;
+            height: 1080px;
+            position: relative;
+        }
+
+        /* Container da Substituição (Fica na parte inferior centralizada) */
+        .sub-overlay-container {
+            position: absolute;
+            bottom: -200px; /* Escondido inicialmente */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 750px;
+            background: rgba(15, 23, 42, 0.95);
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: bottom 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 2px solid #475569;
+        }
+
+        /* Estado Ativo (Entrada da animação) */
+        .sub-overlay-container.active {
+            bottom: 80px;
+        }
+
+        /* Barra de Topo com a Cor do Time / Identificação */
+        .sub-header {
+            padding: 10px 20px;
+            text-transform: uppercase;
+            font-weight: 900;
+            font-size: 14px;
+            letter-spacing: 2px;
+            color: #ffffff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #1e1b4b; /* Valor padrão substituído dinamicamente */
+        }
+
+        .sub-header .team-name {
+            font-size: 18px;
+        }
+
+        .sub-header .badge-sub {
+            background: #f59e0b;
+            color: #0f172a;
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        /* Corpo da substituição (Painel interno) */
+        .sub-body {
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            gap: 15px;
+        }
+
+        /* Linhas do jogador */
+        .player-row {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 12px 15px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .icon-indicator {
+            font-size: 24px;
+            font-weight: 900;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+        }
+
+        /* Estilo Quem Sai */
+        .row-out {
+            border-left: 6px solid #ef4444;
+        }
+        .row-out .icon-indicator {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        /* Estilo Quem Entra */
+        .row-in {
+            border-left: 6px solid #10b981;
+        }
+        .row-in .icon-indicator {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+
+        .player-name {
+            font-size: 26px;
+            font-weight: 700;
+            color: #f8fafc;
+            text-transform: uppercase;
+        }
+
+        .label-action {
+            font-size: 11px;
+            color: #94a3b8;
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: -3px;
+        }
+
+        .player-info-block {
+            display: flex;
+            flex-direction: column;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Container do Gráfico da Substituição -->
+    <div class="sub-overlay-container" id="sub-container">
+        <div class="sub-header" id="sub-header-bg">
+            <span class="team-name" id="lbl-sub-team">NOME DO TIME</span>
+            <span class="badge-sub">SUBSTITUIÇÃO</span>
+        </div>
+        <div class="sub-body">
+            <!-- QUEM SAI -->
+            <div class="player-row row-out">
+                <div class="icon-indicator">▼</div>
+                <div class="player-info-block">
+                    <span class="label-action">SAI</span>
+                    <span class="player-name" id="lbl-player-out">-</span>
+                </div>
+            </div>
+            <!-- QUEM ENTRA -->
+            <div class="player-row row-in">
+                <div class="icon-indicator">▲</div>
+                <div class="player-info-block">
+                    <span class="label-action">ENTRA</span>
+                    <span class="player-name" id="lbl-player-in">-</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+        // Configuração do seu Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyByxKPf3WJgGDLUiPNI_QnEmgsAn0y8s3k",
+            authDomain: "moabb-futebol.firebaseapp.com",
+            databaseURL: "https://moabb-futebol-default-rtdb.firebaseio.com",
+            projectId: "moabb-futebol",
+            storageBucket: "moabb-futebol.firebasestorage.app",
+            messagingSenderId: "154044624617",
+            appId: "1:154044624617:web:cbe332c5b1c468bd270a78"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // Pega o ID do jogo via URL (ex: substituicao.html?id=jogo_hoje) ou usa o padrão
+        const urlParams = new URLSearchParams(window.location.search);
+        const matchId = urlParams.get('id') || "jogo_padrao";
+
+        const matchRef = ref(db, 'matches/' + matchId);
+        let timeoutEsconder = null;
+        let ultimoTimestamp = 0;
+
+        // Escuta as atualizações do Firebase em Tempo Real
+        onValue(matchRef, (snapshot) => {
+            const data = snapshot.val();
+            if (!data) return;
+
+            const container = document.getElementById('sub-container');
+            const overlayAtiva = data.overlays ? data.overlays.substitution : false;
+            const subDados = data.substitution;
+
+            if (subDados && subDados.playerOut && subDados.playerIn) {
+                // Preenche os dados textuais da substituição
+                const side = subDados.team; // 'home' ou 'away'
+                const timeConfig = data.config[side];
+                
+                document.getElementById('lbl-sub-team').textContent = timeConfig.name;
+                document.getElementById('lbl-player-out').textContent = subDados.playerOut;
+                document.getElementById('lbl-player-in').textContent = subDados.playerIn;
+
+                // Aplica a cor principal do time no cabeçalho da overlay
+                document.getElementById('sub-header-bg').style.backgroundColor = timeConfig.color1 || '#1e1b4b';
+
+                // Verifica se é um NOVO comando de clique de substituição pelo carimbo de data/hora (timestamp)
+                if (subDados.timestamp && subDados.timestamp > ultimoTimestamp) {
+                    ultimoTimestamp = subDados.timestamp;
+                    
+                    // Dispara a animação na tela forçadamente ao clicar no painel
+                    container.classList.add('active');
+
+                    // Mantém na tela por 8 segundos e depois recolhe de forma autônoma
+                    clearTimeout(timeoutEsconder);
+                    timeoutEsconder = setTimeout(() => {
+                        container.classList.remove('active');
+                    }, 8000);
+                }
+            }
+
+            // Fallback manual: Se o operador ligar/desligar a chaveta direto no controle de telas do painel
+            if (overlayAtiva) {
+                container.classList.add('active');
+                clearTimeout(timeoutEsconder); // Cancela o timer automático para respeitar o botão físico do painel
+            } else if (!overlayAtiva && (!subDados || subDados.timestamp === ultimoTimestamp)) {
+                // Só remove se a chaveta geral estiver desligada e não estiver no meio da animação de trigger
+                container.classList.remove('active');
+            }
+        });
+    </script>
+</body>
+</html>

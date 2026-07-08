@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Overlay - Fim de Jogo</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Space+Grotesk:wght@500;700&family=Kanit:wght@600;800&display=swap');
+
+        /* Configuração de transparência absoluta para o OBS Studio */
+        html, body {
+            margin: 0;
+            padding: 0;
+            background: transparent !important;
+            overflow: hidden;
+            font-family: 'Space Grotesk', sans-serif;
+            color: #ffffff;
+        }
+
+        #endgame-wrapper {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -60%);
+            width: 950px;
+            padding: 40px;
+            box-sizing: border-box;
+            opacity: 0;
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            backdrop-filter: blur(10px);
+            text-align: center;
+        }
+
+        #endgame-wrapper.visible {
+            opacity: 1;
+            transform: translate(-50%, -50%);
+        }
+
+        /* --- TÍTULO DO EVENTO --- */
+        .status-badge {
+            font-size: 14px;
+            font-weight: 900;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: var(--theme-accent);
+            margin-bottom: 30px;
+        }
+
+        /* --- PAINEL PRINCIPAL DO CONFRONTO --- */
+        .match-result-flex {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 0;
+        }
+
+        .team-block {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            transition: all 0.4s ease;
+        }
+
+        /* Destaque para o time que venceu a partida */
+        .team-block.winner {
+            transform: scale(1.05);
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+        }
+
+        .team-color-bar {
+            width: 60px;
+            height: 6px;
+            border-radius: 3px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .team-name {
+            font-size: 36px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            max-width: 320px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .winner-lbl {
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            background: #10b981;
+            color: #ffffff;
+            padding: 3px 10px;
+            border-radius: 20px;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .team-block.winner .winner-lbl {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* --- PLACAR CENTRAL --- */
+        .score-center {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 25px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 64px;
+            font-weight: 900;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 10px 40px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            min-width: 200px;
+        }
+
+        .score-divider {
+            font-size: 32px;
+            opacity: 0.3;
+            font-weight: 400;
+        }
+
+        /* --- BLOCO SECUNDÁRIO DE PÊNALTIS --- */
+        .penalties-result-box {
+            margin-top: 35px;
+            padding-top: 25px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: none; /* Só aparece via JS se houver decisão por pênaltis */
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        .penalties-title {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            opacity: 0.6;
+            margin-bottom: 8px;
+        }
+
+        .penalties-score {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--theme-accent);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ======================================================= */
+        /* INTEGRAÇÃO COMPLETA COM OS TEMAS DO PAINEL               */
+        /* ======================================================= */
+        
+        /* ESTILO 1: CYBER NEO */
+        .theme-cyber {
+            background: var(--theme-primary);
+            border: 2px solid var(--theme-accent);
+            border-radius: 16px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+        }
+
+        /* ESTILO 2: ASYMMETRIC EDGE */
+        .theme-minimal { transform: skewX(-8px) translate(-50%, -60%); }
+        .theme-minimal.visible { transform: skewX(-8px) translate(-50%, -50%); }
+        .theme-minimal { background: var(--theme-primary); border-left: 8px solid var(--theme-accent); box-shadow: 10px 10px 0px rgba(0,0,0,0.3); }
+        .theme-minimal .score-center { transform: skewX(8px); }
+        .theme-minimal span, .theme-minimal div:not(.score-center) { transform: skewX(8px); }
+
+        /* ESTILO 3: NEO-CLASSIC TV */
+        .theme-monolith { font-family: 'Kanit', sans-serif; background: rgba(15, 23, 42, 0.95); border-radius: 6px; box-shadow: 0 15px 35px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); }
+        .theme-monolith .score-center { background: transparent; border: none; font-size: 72px; padding: 0; }
+        .theme-monolith .penalties-result-box { border-color: var(--theme-accent); }
+    </style>
+</head>
+<body>
+
+    <div id="endgame-wrapper" class="theme-cyber">
+        
+        <div class="status-badge">Fim de Partida</div>
+
+        <div class="match-result-flex">
+            
+            <div class="team-block" id="block-home">
+                <div class="team-color-bar" id="color-home"></div>
+                <div class="team-name" id="txt-home-name">CASA</div>
+                <div class="winner-lbl">VENCEDOR</div>
+            </div>
+
+            <div class="score-center">
+                <span id="score-home">0</span>
+                <span class="score-divider">x</span>
+                <span id="score-away">0</span>
+            </div>
+
+            <div class="team-block" id="block-away">
+                <div class="team-color-bar" id="color-away"></div>
+                <div class="team-name" id="txt-away-name">VISITANTE</div>
+                <div class="winner-lbl">VENCEDOR</div>
+            </div>
+
+        </div>
+
+        <div class="penalties-result-box" id="ui-penalties-box">
+            <div class="penalties-title">Decisão nos Pênaltis</div>
+            <div class="penalties-score">
+                (<span id="pen-score-home">0</span>) &nbsp;vs&nbsp; (<span id="pen-score-away">0</span>)
+            </div>
+        </div>
+
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyByxKPf3WJgGDLUiPNI_QnEmgsAn0y8s3k",
+            authDomain: "moabb-futebol.firebaseapp.com",
+            databaseURL: "https://moabb-futebol-default-rtdb.firebaseio.com",
+            projectId: "moabb-futebol",
+            storageBucket: "moabb-futebol.firebasestorage.app",
+            messagingSenderId: "154044624617",
+            appId: "1:154044624617:web:cbe332c5b1c468bd270a78"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const matchId = urlParams.get('match') || "jogo_padrao";
+
+        const matchRef = ref(db, 'matches/' + matchId);
+
+        onValue(matchRef, (snapshot) => {
+            const data = snapshot.val();
+            if (!data) return;
+
+            // 1. Controle de Visibilidade Baseado no Painel
+            const wrapper = document.getElementById('endgame-wrapper');
+            const isVisible = data.overlays && data.overlays.endgame;
+
+            if (!isVisible) {
+                wrapper.classList.remove('visible');
+                return;
+            }
+
+            // 2. Injetar Design e Cores Escolhidas do Painel
+            const design = data.config.design || { style: "cyber", primary: "#1e1b4b", secondary: "#0f172a", accent: "#f59e0b" };
+            document.documentElement.style.setProperty('--theme-primary', design.primary);
+            document.documentElement.style.setProperty('--theme-secondary', design.secondary);
+            document.documentElement.style.setProperty('--theme-accent', design.accent);
+
+            wrapper.className = 'visible';
+            wrapper.classList.add(`theme-${design.style}`);
+
+            // Nomes e barras de cores estruturais
+            document.getElementById('txt-home-name').textContent = data.config.home.name;
+            document.getElementById('txt-away-name').textContent = data.config.away.name;
+            document.getElementById('color-home').style.backgroundColor = data.config.home.color1 || "#3b82f6";
+            document.getElementById('color-away').style.backgroundColor = data.config.away.color1 || "#ef4444";
+
+            // 3. Aplicar Gols do Tempo Normal
+            const goalsHome = data.stats.home.goals || 0;
+            const goalsAway = data.stats.away.goals || 0;
+            document.getElementById('score-home').textContent = goalsHome;
+            document.getElementById('score-away').textContent = goalsAway;
+
+            // 4. Verificar Estrutura de Pênaltis
+            const penData = data.penalties || {};
+            const homeShots = penData.home || (data.stats && data.stats.home && data.stats.home.penalties) || [];
+            const awayShots = penData.away || (data.stats && data.stats.away && data.stats.away.penalties) || [];
+
+            const penGoalsHome = Array.isArray(homeShots) ? homeShots.filter(v => v === 'success').length : (data.stats?.home?.penaltyScore || 0);
+            const penGoalsAway = Array.isArray(awayShots) ? awayShots.filter(v => v === 'success').length : (data.stats?.away?.penaltyScore || 0);
+
+            // Regra: Exibe a caixa de pênaltis se houve cobranças gravadas ou se o placar de pênaltis for maior que zero
+            const hasPenalties = penGoalsHome > 0 || penGoalsAway > 0 || homeShots.length > 0 || awayShots.length > 0;
+            const penBox = document.getElementById('ui-penalties-box');
+
+            if (hasPenalties) {
+                penBox.style.display = 'block';
+                document.getElementById('pen-score-home').textContent = penGoalsHome;
+                document.getElementById('pen-score-away').textContent = penGoalsAway;
+            } else {
+                penBox.style.display = 'none';
+            }
+
+            // 5. Determinar Quem é o Grande Vencedor da Partida para Destacar na Tela
+            const blockHome = document.getElementById('block-home');
+            const blockAway = document.getElementById('block-away');
+            
+            // Remove marcações antigas antes do cálculo
+            blockHome.classList.remove('winner');
+            blockAway.classList.remove('winner');
+
+            const totalScoreHome = goalsHome + penGoalsHome;
+            const totalScoreAway = goalsAway + penGoalsAway;
+
+            if (totalScoreHome > totalScoreAway) {
+                blockHome.classList.add('winner');
+            } else if (totalScoreAway > totalScoreHome) {
+                blockAway.classList.add('winner');
+            }
+        });
+    </script>
+</body>
+</html>

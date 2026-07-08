@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Overlay - Escalação Oficial com Campo</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght=700;900&family=Space+Grotesk:wght=500;700&family=Kanit:wght=600;800&display=swap');
+
+        /* Configuração de transparência absoluta para o OBS Studio */
+        html, body {
+            margin: 0;
+            padding: 0;
+            background: transparent !important;
+            overflow: hidden;
+            font-family: 'Space Grotesk', sans-serif;
+            color: #ffffff;
+        }
+
+        #lineup-wrapper {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -60%);
+            width: 1280px;
+            height: 720px;
+            display: grid;
+            grid-template-columns: 420px 1fr;
+            gap: 40px;
+            padding: 40px;
+            box-sizing: border-box;
+            opacity: 0;
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        #lineup-wrapper.visible {
+            opacity: 1;
+            transform: translate(-50%, -50%);
+        }
+
+        /* --- LISTA DE JOGADORES (ESQUERDA) --- */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 100%;
+            z-index: 5;
+        }
+
+        .header-panel {
+            padding: 15px 20px;
+            margin-bottom: 20px;
+        }
+
+        .team-title {
+            font-size: 36px;
+            font-weight: 800;
+            text-transform: uppercase;
+            margin: 0;
+        }
+
+        .tactic-badge {
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            opacity: 0.8;
+        }
+
+        .players-list {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            overflow: hidden;
+        }
+
+        .player-row {
+            display: flex;
+            align-items: center;
+            padding: 8px 15px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .player-number {
+            width: 35px;
+            font-weight: 800;
+            text-align: center;
+            margin-right: 15px;
+        }
+
+        .coach-panel {
+            margin-top: 20px;
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: 500;
+        }
+        .coach-panel strong {
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        /* --- ILUSTRAÇÃO REALISTA DO CAMPO DE FUTEBOL (DIREITA) --- */
+        .field-container {
+            position: relative;
+            /* Fundo Verde Realista de Gramado em listras verticais */
+            background: repeating-linear-gradient(
+                90deg,
+                #1e5128,
+                #1e5128 60px,
+                #1b4d22 60px,
+                #1b4d22 120px
+            );
+            border: 4px solid #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            padding: 40px 10px;
+            box-sizing: border-box;
+        }
+
+        /* Linhas do Gramado usando pseudo-elementos */
+        /* Linha do Meio Campo */
+        .field-container::before {
+            content: '';
+            position: absolute;
+            top: 50%; left: 0; right: 0;
+            height: 3px; 
+            background: rgba(255, 255, 255, 0.6);
+            transform: translateY(-50%);
+            z-index: 1;
+        }
+
+        /* Círculo Central do Campo */
+        .field-center-circle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 160px;
+            height: 160px;
+            border: 3px solid rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Linha da Grande Área de Baixo (Defesa) */
+        .field-penalty-area-bottom {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;
+            height: 90px;
+            border: 3px solid rgba(255, 255, 255, 0.6);
+            border-bottom: none;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Linha da Grande Área de Cima (Ataque) */
+        .field-penalty-area-top {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;
+            height: 90px;
+            border: 3px solid rgba(255, 255, 255, 0.6);
+            border-top: none;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Linhas Táticas das Camadas de Jogadores */
+        .field-line {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 25px;
+            width: 100%;
+            z-index: 2;
+        }
+
+        /* Ícone do Jogador no Campo */
+        .field-player {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            width: 100px;
+            animation: playerSpawn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        .player-shirt {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 16px;
+            border: 3px solid #ffffff;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.5);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.6);
+            z-index: 3;
+        }
+
+        .player-field-name {
+            background: rgba(15, 23, 42, 0.9);
+            color: #ffffff;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 700;
+            margin-top: 8px;
+            white-space: nowrap;
+            max-width: 105px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            border-bottom: 3px solid var(--theme-accent);
+            z-index: 3;
+        }
+
+        @keyframes playerSpawn {
+            from { opacity: 0; transform: scale(0.4) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        /* ======================================================= */
+        /* INTEGRAÇÃO COM OS TEMAS DO PAINEL                       */
+        /* ======================================================= */
+        
+        /* ESTILO 1: CYBER NEO */
+        .theme-cyber .header-panel, .theme-cyber .player-row, .theme-cyber .coach-panel {
+            background: var(--theme-primary);
+            border: 1px solid var(--theme-accent);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .theme-cyber .player-number { color: var(--theme-accent); font-family: 'Orbitron', sans-serif; }
+
+        /* ESTILO 2: ASYMMETRIC EDGE */
+        .theme-minimal { transform: skewX(-6px) translate(-50%, -60%); }
+        .theme-minimal.visible { transform: skewX(-6px) translate(-50%, -50%); }
+        .theme-minimal .header-panel { background: var(--theme-primary); border-left: 6px solid var(--theme-accent); }
+        .theme-minimal .player-row { background: var(--theme-secondary); border-left: 4px solid var(--theme-accent); }
+        .theme-minimal .coach-panel { background: #ffffff; color: #000; border-left: 6px solid var(--theme-primary); }
+        .theme-minimal span, .theme-minimal div:not(.field-container):not(.field-line):not(.field-player):not(.player-shirt):not(.player-field-name) { transform: skewX(6px); }
+
+        /* ESTILO 3: NEO-CLASSIC TV */
+        .theme-monolith { font-family: 'Kanit', sans-serif; }
+        .theme-monolith .header-panel { background: linear-gradient(90deg, var(--theme-primary), transparent); border-radius: 4px; }
+        .theme-monolith .player-row { background: rgba(15, 23, 42, 0.85); border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .theme-monolith .coach-panel { background: var(--theme-accent); color: #0f172a; font-weight: 600; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <div id="lineup-wrapper" class="theme-cyber">
+        
+        <div class="sidebar">
+            <div>
+                <div class="header-panel">
+                    <h1 class="team-title" id="txt-team-name">CASA</h1>
+                    <div class="tactic-badge" id="txt-tactic-type">ESQUEMA: --</div>
+                </div>
+
+                <div class="players-list" id="ui-players-list">
+                    </div>
+            </div>
+
+            <div class="coach-panel" id="ui-coach-panel">
+                TÉCNICO: <strong id="txt-coach-name">-</strong>
+            </div>
+        </div>
+
+        <div class="field-container" id="tactical-field">
+            <div class="field-penalty-area-top"></div>
+            <div class="field-center-circle"></div>
+            <div class="field-penalty-area-bottom"></div>
+
+            </div>
+
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyByxKPf3WJgGDLUiPNI_QnEmgsAn0y8s3k",
+            authDomain: "moabb-futebol.firebaseapp.com",
+            databaseURL: "https://moabb-futebol-default-rtdb.firebaseio.com",
+            projectId: "moabb-futebol",
+            storageBucket: "moabb-futebol.firebasestorage.app",
+            messagingSenderId: "154044624617",
+            appId: "1:154044624617:web:cbe332c5b1c468bd270a78"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const matchId = urlParams.get('match') || "jogo_padrao";
+
+        const matchRef = ref(db, 'matches/' + matchId);
+
+        onValue(matchRef, (snapshot) => {
+            const data = snapshot.val();
+            if (!data) return;
+
+            // Identificar qual overlay está ativo no painel de controle
+            let activeSide = null;
+            if (data.overlays && data.overlays.lineupHome) {
+                activeSide = 'home';
+            } else if (data.overlays && data.overlays.lineupAway) {
+                activeSide = 'away';
+            }
+
+            const wrapper = document.getElementById('lineup-wrapper');
+
+            // Se nenhum dos botões estiver ligado, recolhe e oculta com animação
+            if (!activeSide) {
+                wrapper.classList.remove('visible');
+                return;
+            }
+
+            const teamConfig = data.config[activeSide];
+            
+            // 1. Injetar Design e Cores do Painel
+            const design = data.config.design || { style: "cyber", primary: "#1e1b4b", secondary: "#0f172a", accent: "#f59e0b" };
+            document.documentElement.style.setProperty('--theme-primary', design.primary);
+            document.documentElement.style.setProperty('--theme-secondary', design.secondary);
+            document.documentElement.style.setProperty('--theme-accent', design.accent);
+
+            // Aplicar exibição do wrapper e o tema ativo
+            wrapper.className = 'visible';
+            wrapper.classList.add(`theme-${design.style}`);
+
+            // 2. Aplicar Textos Principais
+            document.getElementById('txt-team-name').textContent = teamConfig.name;
+            document.getElementById('txt-tactic-type').textContent = `ESQUEMA TÁTICO: ${teamConfig.tactic || '4-4-2'}`;
+            document.getElementById('txt-coach-name').textContent = teamConfig.coach || "Não Informado";
+
+            // 3. Processar Textarea de Jogadores
+            const rawPlayers = teamConfig.players ? teamConfig.players.split('\n') : [];
+            const parsedPlayers = [];
+            const listContainer = document.getElementById('ui-players-list');
+            listContainer.innerHTML = '';
+
+            rawPlayers.forEach(line => {
+                if(!line.trim()) return;
+                const match = line.match(/^(\d+)\s*[-–]?\s*(.*)$/);
+                let num = "•", name = line.trim();
+                if(match) {
+                    num = match[1];
+                    name = match[2].trim();
+                }
+                parsedPlayers.push({ number: num, name: name });
+
+                const row = document.createElement('div');
+                row.className = 'player-row';
+                row.innerHTML = `<div class="player-number">${num}</div><div class="player-name">${name}</div>`;
+                listContainer.appendChild(row);
+            });
+
+            // 4. Montar a Ilustração Tática por cima do campo de grama
+            renderTacticalField(parsedPlayers, teamConfig.tactic || '4-4-2', teamConfig.color1, teamConfig.color2);
+        });
+
+        function renderTacticalField(players, tacticString, c1, c2) {
+            const field = document.getElementById('tactical-field');
+            
+            // Limpa apenas os jogadores antigos da tela, preservando as linhas estruturais do campo
+            const oldLines = field.querySelectorAll('.field-line');
+            oldLines.forEach(l => l.remove());
+
+            if (players.length === 0) return;
+
+            const lineCounts = tacticString.replace(/[^0-9-]/g, '').split('-').map(Number);
+            
+            const goalkeeper = players[0];
+            const outfieldPlayers = players.slice(1);
+
+            // Adiciona a linha do Goleiro na parte inferior (defesa)
+            createFieldLine(field, [goalkeeper], c1, c2);
+
+            // Distribui os jogadores de linha de trás para frente
+            let playerIndex = 0;
+            lineCounts.forEach(count => {
+                const playersInLine = [];
+                for (let i = 0; i < count; i++) {
+                    if (outfieldPlayers[playerIndex]) {
+                        playersInLine.push(outfieldPlayers[playerIndex]);
+                        playerIndex++;
+                    }
+                }
+                if (playersInLine.length > 0) {
+                    createFieldLine(field, playersInLine, c1, c2);
+                }
+            });
+        }
+
+        function createFieldLine(fieldContainer, playersArray, color1, color2) {
+            const line = document.createElement('div');
+            line.className = 'field-line';
+
+            playersArray.forEach(p => {
+                const pEl = document.createElement('div');
+                pEl.className = 'field-player';
+                
+                pEl.innerHTML = `
+                    <div class="player-shirt" style="background-color: ${color1}; color: ${color2};">
+                        ${p.number}
+                    </div>
+                    <div class="player-field-name">${p.name.split(' ')[0]}</div>
+                `;
+                line.appendChild(pEl);
+            });
+
+            // Insere antes do primeiro elemento existente (empurrando o ataque para cima e goleiro para baixo)
+            fieldContainer.insertBefore(line, fieldContainer.firstChild);
+        }
+    </script>
+</body>
+</html>

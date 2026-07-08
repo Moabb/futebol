@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Overlay - Disputa de Pênaltis</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Space+Grotesk:wght@500;700&family=Kanit:wght@600;800&display=swap');
+
+        /* Configuração de transparência absoluta para o OBS Studio */
+        html, body {
+            margin: 0;
+            padding: 0;
+            background: transparent !important;
+            overflow: hidden;
+            font-family: 'Space Grotesk', sans-serif;
+            color: #ffffff;
+        }
+
+        #penalties-wrapper {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -60%);
+            width: 850px;
+            padding: 25px 35px;
+            box-sizing: border-box;
+            opacity: 0;
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            backdrop-filter: blur(10px);
+        }
+
+        #penalties-wrapper.visible {
+            opacity: 1;
+            transform: translate(-50%, -50%);
+        }
+
+        /* --- TÍTULO PRINCIPAL --- */
+        .title-panel {
+            text-align: center;
+            font-size: 14px;
+            font-weight: 800;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 25px;
+            opacity: 0.9;
+        }
+        .title-panel span {
+            color: var(--theme-accent);
+        }
+
+        /* --- CONTÊINER DAS EQUIPES --- */
+        .teams-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .team-row {
+            display: grid;
+            grid-template-columns: 200px 70px 1fr;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .team-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 24px;
+            font-weight: 800;
+            text-transform: uppercase;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .color-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid #ffffff;
+            flex-shrink: 0;
+        }
+
+        /* --- PLACAR TOTAL DE PÊNALTIS --- */
+        .penalty-score {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 32px;
+            font-weight: 900;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* --- ESTRELA/CÍRCULO DAS COBRANÇAS --- */
+        .shots-track {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .ball-slot {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 800;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+        }
+
+        /* Estados das Cobranças */
+        .ball-slot.success {
+            background: #10b981;
+            border-color: #10b981;
+            color: #ffffff;
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.6);
+            transform: scale(1.05);
+        }
+
+        .ball-slot.miss {
+            background: #ef4444;
+            border-color: #ef4444;
+            color: #ffffff;
+            box-shadow: 0 0 12px rgba(239, 68, 68, 0.6);
+            transform: scale(1.05);
+        }
+
+        .ball-slot.next {
+            border-color: var(--theme-accent);
+            animation: pulseCurrent 1.5s infinite;
+        }
+
+        @keyframes pulseCurrent {
+            0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.5); }
+            70% { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+        }
+
+        /* ======================================================= */
+        /* TEMAS ADAPTATIVOS COM O PAINEL                           */
+        /* ======================================================= */
+        
+        /* ESTILO 1: CYBER NEO */
+        .theme-cyber {
+            background: var(--theme-primary);
+            border: 2px solid var(--theme-accent);
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+        }
+        .theme-cyber .penalty-score { color: var(--theme-accent); }
+
+        /* ESTILO 2: ASYMMETRIC EDGE */
+        .theme-minimal { transform: skewX(-8px) translate(-50%, -60%); }
+        .theme-minimal.visible { transform: skewX(-8px) translate(-50%, -50%); }
+        .theme-minimal { background: var(--theme-primary); border-left: 8px solid var(--theme-accent); box-shadow: 10px 10px 0px rgba(0,0,0,0.3); }
+        .theme-minimal .ball-slot { transform: skewX(8px); }
+        .theme-minimal .ball-slot.success, .theme-minimal .ball-slot.miss { transform: skewX(8px) scale(1.05); }
+        .theme-minimal span, .theme-minimal div:not(.ball-slot) { transform: skewX(8px); }
+
+        /* ESTILO 3: NEO-CLASSIC TV */
+        .theme-monolith { font-family: 'Kanit', sans-serif; background: rgba(15, 23, 42, 0.95); border-radius: 6px; box-shadow: 0 15px 35px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); }
+        .theme-monolith .title-panel { border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; }
+        .theme-monolith .penalty-score { background: var(--theme-accent); color: #0f172a; border: none; }
+    </style>
+</head>
+<body>
+
+    <div id="penalties-wrapper" class="theme-cyber">
+        
+        <div class="title-panel">
+            Disputa de <span>Pênaltis</span> alternados
+        </div>
+
+        <div class="teams-container">
+            
+            <div class="team-row">
+                <div class="team-info">
+                    <div class="color-dot" id="dot-home"></div>
+                    <span id="txt-home-name">CASA</span>
+                </div>
+                <div class="penalty-score" id="score-home-penalties">0</div>
+                <div class="shots-track" id="track-home">
+                    </div>
+            </div>
+
+            <div class="team-row">
+                <div class="team-info">
+                    <div class="color-dot" id="dot-away"></div>
+                    <span id="txt-away-name">VISITANTE</span>
+                </div>
+                <div class="penalty-score" id="score-away-penalties">0</div>
+                <div class="shots-track" id="track-away">
+                    </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyByxKPf3WJgGDLUiPNI_QnEmgsAn0y8s3k",
+            authDomain: "moabb-futebol.firebaseapp.com",
+            databaseURL: "https://moabb-futebol-default-rtdb.firebaseio.com",
+            projectId: "moabb-futebol",
+            storageBucket: "moabb-futebol.firebasestorage.app",
+            messagingSenderId: "154044624617",
+            appId: "1:154044624617:web:cbe332c5b1c468bd270a78"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const matchId = urlParams.get('match') || "jogo_padrao";
+
+        const matchRef = ref(db, 'matches/' + matchId);
+
+        onValue(matchRef, (snapshot) => {
+            const data = snapshot.val();
+            if (!data) return;
+
+            // 1. Controle Ativo de Visibilidade
+            const wrapper = document.getElementById('penalties-wrapper');
+            const isVisible = data.overlays && data.overlays.penalties;
+
+            if (!isVisible) {
+                wrapper.classList.remove('visible');
+                return;
+            }
+
+            // 2. Injetar Cores Temáticas e Configurar Estilo do Painel
+            const design = data.config.design || { style: "cyber", primary: "#1e1b4b", secondary: "#0f172a", accent: "#f59e0b" };
+            document.documentElement.style.setProperty('--theme-primary', design.primary);
+            document.documentElement.style.setProperty('--theme-secondary', design.secondary);
+            document.documentElement.style.setProperty('--theme-accent', design.accent);
+
+            wrapper.className = 'visible';
+            wrapper.classList.add(`theme-${design.style}`);
+
+            // Cores e nomes dos times
+            document.getElementById('dot-home').style.backgroundColor = data.config.home.color1 || "#3b82f6";
+            document.getElementById('dot-away').style.backgroundColor = data.config.away.color1 || "#ef4444";
+            document.getElementById('txt-home-name').textContent = data.config.home.name;
+            document.getElementById('txt-away-name').textContent = data.config.away.name;
+
+            // 3. Captura Flexível dos Dados de Pênalti (Suporta múltiplos nós do banco)
+            const penData = data.penalties || { currentSide: 'home', currentIndex: 0 };
+            
+            // Tenta buscar as listas de acertos do nó raiz ou de dentro de stats
+            const homeShots = penData.home || (data.stats && data.stats.home && data.stats.home.penalties) || [];
+            const awayShots = penData.away || (data.stats && data.stats.away && data.stats.away.penalties) || [];
+
+            // Define o placar numérico com base nas bolinhas verdes ('success')
+            const homeGoals = Array.isArray(homeShots) ? homeShots.filter(v => v === 'success').length : (data.stats?.home?.penaltyScore || 0);
+            const awayGoals = Array.isArray(awayShots) ? awayShots.filter(v => v === 'success').length : (data.stats?.away?.penaltyScore || 0);
+            
+            document.getElementById('score-home-penalties').textContent = homeGoals;
+            document.getElementById('score-away-penalties').textContent = awayGoals;
+
+            // Converte strings de texto separadas por vírgula em Array caso o painel envie como texto plano
+            const finalHomeArray = typeof homeShots === 'string' ? homeShots.split(',') : homeShots;
+            const finalAwayArray = typeof awayShots === 'string' ? awayShots.split(',') : awayShots;
+
+            // Renderizar as sequências visuais de bolinhas (✓ e ✕)
+            renderTrack('home', finalHomeArray, penData.currentSide === 'home' ? penData.currentIndex : -1);
+            renderTrack('away', finalAwayArray, penData.currentSide === 'away' ? penData.currentIndex : -1);
+        });
+
+        function renderTrack(side, shotsArray, activeIndex) {
+            const trackContainer = document.getElementById(`track-${side}`);
+            trackContainer.innerHTML = '';
+
+            // Limpa arrays inválidos ou vazios
+            const cleanShots = Array.isArray(shotsArray) ? shotsArray.filter(v => v === 'success' || v === 'miss') : [];
+
+            // Mantém o layout mínimo com 5 bolinhas na tela
+            const totalSlots = Math.max(5, cleanShots.length + (activeIndex !== -1 ? 1 : 0));
+
+            for (let i = 0; i < totalSlots; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'ball-slot';
+                slot.textContent = i + 1;
+
+                if (cleanShots[i] === 'success') {
+                    slot.className = 'ball-slot success';
+                    slot.innerHTML = '✓';
+                } else if (cleanShots[i] === 'miss') {
+                    slot.className = 'ball-slot miss';
+                    slot.innerHTML = '✕';
+                } else if (i === activeIndex) {
+                    slot.className = 'ball-slot next'; // Indicador de quem está cobrando agora
+                }
+
+                trackContainer.appendChild(slot);
+            }
+        }
+    </script>
+</body>
+</html>
