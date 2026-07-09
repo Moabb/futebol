@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Overlay - Estatísticas do Jogo</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Space+Grotesk:wght@500;700&family=Kanit:wght@600;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght=700;900&family=Space+Grotesk:wght=500;700&family=Kanit:wght=600;800&display=swap');
 
         /* Configuração de transparência absoluta para o OBS Studio */
         html, body {
@@ -189,7 +189,8 @@
         </div>
 
         <div id="stats-rows-container">
-            </div>
+            <!-- As linhas de estatísticas serão populadas dinamicamente -->
+        </div>
 
     </div>
 
@@ -210,11 +211,6 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const matchId = urlParams.get('match') || "jogo_padrao";
-
-        const matchRef = ref(db, 'matches/' + matchId);
-
         // Mapeamento amigável dos nomes internos para exibição na TV
         const statNames = {
             goals: "Gols Marcados",
@@ -226,83 +222,95 @@
             redCards: "Cartões Vermelhos"
         };
 
-        onValue(matchRef, (snapshot) => {
-            const data = snapshot.val();
-            if (!data) return;
+        // ========================================================
+        // ESCUTA DA PARTIDA ATIVA EM TEMPO REAL
+        // ========================================================
+        const activeMatchRef = ref(db, 'activeMatchId');
 
-            // 1. Respeitar Visibilidade do Painel (ON/OFF)
-            const wrapper = document.getElementById('stats-wrapper');
-            const isVisible = data.overlays && data.overlays.stats;
-            
-            if (!isVisible) {
-                wrapper.classList.remove('visible');
-                return;
-            }
+        onValue(activeMatchRef, (snapshot) => {
+            const activeId = snapshot.val() || "jogo_padrao";
+            console.log("Estatísticas sincronizadas na partida ativa:", activeId);
 
-            // 2. Injetar Design e Configurações de Cores das Equipes
-            const design = data.config.design || { style: "cyber", primary: "#1e1b4b", secondary: "#0f172a", accent: "#f59e0b" };
-            document.documentElement.style.setProperty('--theme-primary', design.primary);
-            document.documentElement.style.setProperty('--theme-secondary', design.secondary);
-            document.documentElement.style.setProperty('--theme-accent', design.accent);
+            const matchRef = ref(db, 'matches/' + activeId);
 
-            wrapper.className = 'visible';
-            wrapper.classList.add(`theme-${design.style}`);
+            onValue(matchRef, (matchSnapshot) => {
+                const data = matchSnapshot.val();
+                if (!data) return;
 
-            const homeColor = data.config.home.color1 || "#3b82f6";
-            const awayColor = data.config.away.color1 || "#ef4444";
-
-            document.getElementById('dot-home').style.backgroundColor = homeColor;
-            document.getElementById('dot-away').style.backgroundColor = awayColor;
-            document.getElementById('txt-home-name').textContent = data.config.home.name;
-            document.getElementById('txt-away-name').textContent = data.config.away.name;
-
-            // 3. Renderizar cada linha de Estatística calculando as porcentagens das barras
-            const container = document.getElementById('stats-rows-container');
-            container.innerHTML = '';
-
-            Object.keys(statNames).forEach(key => {
-                const homeVal = data.stats.home[key] || 0;
-                const awayVal = data.stats.away[key] || 0;
-
-                // Evita divisão por zero se ambos estiverem zerados
-                const total = homeVal + awayVal;
-                let homePercent = 0;
-                let awayPercent = 0;
-
-                if (total > 0) {
-                    homePercent = (homeVal / total) * 100;
-                    awayPercent = (awayVal / total) * 100;
+                // 1. Respeitar Visibilidade do Painel (ON/OFF)
+                const wrapper = document.getElementById('stats-wrapper');
+                const isVisible = data.overlays && data.overlays.stats;
+                
+                if (!isVisible) {
+                    wrapper.classList.remove('visible');
+                    return;
                 }
 
-                // Customização extra se a métrica for cartões (adiciona o quadradinho do cartão visual)
-                let extraLabelHome = "";
-                let extraLabelAway = "";
-                if(key === 'yellowCards') {
-                    extraLabelHome = `<div class="mini-card yellow"></div> `;
-                    extraLabelAway = ` <div class="mini-card yellow"></div>`;
-                } else if(key === 'redCards') {
-                    extraLabelHome = `<div class="mini-card red"></div> `;
-                    extraLabelAway = ` <div class="mini-card red"></div>`;
-                }
+                // 2. Injetar Design e Configurações de Cores das Equipes
+                const design = data.config.design || { style: "cyber", primary: "#1e1b4b", secondary: "#0f172a", accent: "#f59e0b" };
+                document.documentElement.style.setProperty('--theme-primary', design.primary);
+                document.documentElement.style.setProperty('--theme-secondary', design.secondary);
+                document.documentElement.style.setProperty('--theme-accent', design.accent);
 
-                const row = document.createElement('div');
-                row.className = 'stat-row';
-                row.innerHTML = `
-                    <div class="stat-labels">
-                        <div class="stat-value home-val">${extraLabelHome}${homeVal}</div>
-                        <div class="stat-title">${statNames[key]}</div>
-                        <div class="stat-value away-val">${awayVal}${extraLabelAway}</div>
-                    </div>
-                    <div class="bar-container">
-                        <div class="bar-half bar-home-wrapper">
-                            <div class="progress-bar" style="width: ${homePercent}%; background-color: ${homeColor}; border-radius: 5px 0 0 5px;"></div>
+                wrapper.className = 'visible';
+                wrapper.classList.add(`theme-${design.style}`);
+
+                const homeColor = data.config.home.color1 || "#3b82f6";
+                const awayColor = data.config.away.color1 || "#ef4444";
+
+                document.getElementById('dot-home').style.backgroundColor = homeColor;
+                document.getElementById('dot-away').style.backgroundColor = awayColor;
+                document.getElementById('txt-home-name').textContent = data.config.home.name;
+                document.getElementById('txt-away-name').textContent = data.config.away.name;
+
+                // 3. Renderizar cada linha de Estatística calculando as porcentagens das barras
+                const container = document.getElementById('stats-rows-container');
+                container.innerHTML = '';
+
+                Object.keys(statNames).forEach(key => {
+                    const homeVal = data.stats.home[key] || 0;
+                    const awayVal = data.stats.away[key] || 0;
+
+                    // Evita divisão por zero se ambos estiverem zerados
+                    const total = homeVal + awayVal;
+                    let homePercent = 0;
+                    let awayPercent = 0;
+
+                    if (total > 0) {
+                        homePercent = (homeVal / total) * 100;
+                        awayPercent = (awayVal / total) * 100;
+                    }
+
+                    // Customização extra se a métrica for cartões (adiciona o quadradinho do cartão visual)
+                    let extraLabelHome = "";
+                    let extraLabelAway = "";
+                    if(key === 'yellowCards') {
+                        extraLabelHome = `<div class="mini-card yellow"></div> `;
+                        extraLabelAway = ` <div class="mini-card yellow"></div>`;
+                    } else if(key === 'redCards') {
+                        extraLabelHome = `<div class="mini-card red"></div> `;
+                        extraLabelAway = ` <div class="mini-card red"></div>`;
+                    }
+
+                    const row = document.createElement('div');
+                    row.className = 'stat-row';
+                    row.innerHTML = `
+                        <div class="stat-labels">
+                            <div class="stat-value home-val">${extraLabelHome}${homeVal}</div>
+                            <div class="stat-title">${statNames[key]}</div>
+                            <div class="stat-value away-val">${awayVal}${extraLabelAway}</div>
                         </div>
-                        <div class="bar-half bar-away-wrapper">
-                            <div class="progress-bar" style="width: ${awayPercent}%; background-color: ${awayColor}; border-radius: 0 5px 5px 0;"></div>
+                        <div class="bar-container">
+                            <div class="bar-half bar-home-wrapper">
+                                <div class="progress-bar" style="width: ${homePercent}%; background-color: ${homeColor}; border-radius: 5px 0 0 5px;"></div>
+                            </div>
+                            <div class="bar-half bar-away-wrapper">
+                                <div class="progress-bar" style="width: ${awayPercent}%; background-color: ${awayColor}; border-radius: 0 5px 5px 0;"></div>
+                            </div>
                         </div>
-                    </div>
-                `;
-                container.appendChild(row);
+                    `;
+                    container.appendChild(row);
+                });
             });
         });
     </script>

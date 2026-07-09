@@ -188,8 +188,7 @@
                     <span id="txt-home-name">CASA</span>
                 </div>
                 <div class="penalty-score" id="score-home-penalties">0</div>
-                <div class="shots-track" id="track-home">
-                    </div>
+                <div class="shots-track" id="track-home"></div>
             </div>
 
             <div class="team-row">
@@ -198,8 +197,7 @@
                     <span id="txt-away-name">VISITANTE</span>
                 </div>
                 <div class="penalty-score" id="score-away-penalties">0</div>
-                <div class="shots-track" id="track-away">
-                    </div>
+                <div class="shots-track" id="track-away"></div>
             </div>
 
         </div>
@@ -223,60 +221,67 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const matchId = urlParams.get('match') || "jogo_padrao";
+        // ========================================================
+        // ESCUTA DA PARTIDA ATIVA EM TEMPO REAL
+        // ========================================================
+        const activeMatchRef = ref(db, 'activeMatchId');
 
-        const matchRef = ref(db, 'matches/' + matchId);
+        onValue(activeMatchRef, (snapshot) => {
+            const activeId = snapshot.val() || "jogo_padrao";
+            console.log("Pênaltis sincronizados na partida ativa:", activeId);
 
-        onValue(matchRef, (snapshot) => {
-            const data = snapshot.val();
-            if (!data) return;
+            const matchRef = ref(db, 'matches/' + activeId);
 
-            // 1. Controle Ativo de Visibilidade
-            const wrapper = document.getElementById('penalties-wrapper');
-            const isVisible = data.overlays && data.overlays.penalties;
+            onValue(matchRef, (matchSnapshot) => {
+                const data = matchSnapshot.val();
+                if (!data) return;
 
-            if (!isVisible) {
-                wrapper.classList.remove('visible');
-                return;
-            }
+                // 1. Controle Ativo de Visibilidade
+                const wrapper = document.getElementById('penalties-wrapper');
+                const isVisible = data.overlays && data.overlays.penalties;
 
-            // 2. Injetar Cores Temáticas e Configurar Estilo do Painel
-            const design = data.config.design || { style: "cyber", primary: "#1e1b4b", secondary: "#0f172a", accent: "#f59e0b" };
-            document.documentElement.style.setProperty('--theme-primary', design.primary);
-            document.documentElement.style.setProperty('--theme-secondary', design.secondary);
-            document.documentElement.style.setProperty('--theme-accent', design.accent);
+                if (!isVisible) {
+                    wrapper.classList.remove('visible');
+                    return;
+                }
 
-            wrapper.className = 'visible';
-            wrapper.classList.add(`theme-${design.style}`);
+                // 2. Injetar Cores Temáticas e Configurar Estilo do Painel
+                const design = data.config.design || { style: "cyber", primary: "#1e1b4b", secondary: "#0f172a", accent: "#f59e0b" };
+                document.documentElement.style.setProperty('--theme-primary', design.primary);
+                document.documentElement.style.setProperty('--theme-secondary', design.secondary);
+                document.documentElement.style.setProperty('--theme-accent', design.accent);
 
-            // Cores e nomes dos times
-            document.getElementById('dot-home').style.backgroundColor = data.config.home.color1 || "#3b82f6";
-            document.getElementById('dot-away').style.backgroundColor = data.config.away.color1 || "#ef4444";
-            document.getElementById('txt-home-name').textContent = data.config.home.name;
-            document.getElementById('txt-away-name').textContent = data.config.away.name;
+                wrapper.className = 'visible';
+                wrapper.classList.add(`theme-${design.style}`);
 
-            // 3. Captura Flexível dos Dados de Pênalti (Suporta múltiplos nós do banco)
-            const penData = data.penalties || { currentSide: 'home', currentIndex: 0 };
-            
-            // Tenta buscar as listas de acertos do nó raiz ou de dentro de stats
-            const homeShots = penData.home || (data.stats && data.stats.home && data.stats.home.penalties) || [];
-            const awayShots = penData.away || (data.stats && data.stats.away && data.stats.away.penalties) || [];
+                // Cores e nomes dos times
+                document.getElementById('dot-home').style.backgroundColor = data.config.home.color1 || "#3b82f6";
+                document.getElementById('dot-away').style.backgroundColor = data.config.away.color1 || "#ef4444";
+                document.getElementById('txt-home-name').textContent = data.config.home.name;
+                document.getElementById('txt-away-name').textContent = data.config.away.name;
 
-            // Define o placar numérico com base nas bolinhas verdes ('success')
-            const homeGoals = Array.isArray(homeShots) ? homeShots.filter(v => v === 'success').length : (data.stats?.home?.penaltyScore || 0);
-            const awayGoals = Array.isArray(awayShots) ? awayShots.filter(v => v === 'success').length : (data.stats?.away?.penaltyScore || 0);
-            
-            document.getElementById('score-home-penalties').textContent = homeGoals;
-            document.getElementById('score-away-penalties').textContent = awayGoals;
+                // 3. Captura Flexível dos Dados de Pênalti
+                const penData = data.penalties || { currentSide: 'home', currentIndex: 0 };
+                
+                // Tenta buscar as listas de acertos do nó raiz ou de dentro de stats
+                const homeShots = penData.home || (data.stats && data.stats.home && data.stats.home.penalties) || [];
+                const awayShots = penData.away || (data.stats && data.stats.away && data.stats.away.penalties) || [];
 
-            // Converte strings de texto separadas por vírgula em Array caso o painel envie como texto plano
-            const finalHomeArray = typeof homeShots === 'string' ? homeShots.split(',') : homeShots;
-            const finalAwayArray = typeof awayShots === 'string' ? awayShots.split(',') : awayShots;
+                // Define o placar numérico com base nas bolinhas verdes ('success')
+                const homeGoals = Array.isArray(homeShots) ? homeShots.filter(v => v === 'success').length : (data.stats?.home?.penaltyScore || 0);
+                const awayGoals = Array.isArray(awayShots) ? awayShots.filter(v => v === 'success').length : (data.stats?.away?.penaltyScore || 0);
+                
+                document.getElementById('score-home-penalties').textContent = homeGoals;
+                document.getElementById('score-away-penalties').textContent = awayGoals;
 
-            // Renderizar as sequências visuais de bolinhas (✓ e ✕)
-            renderTrack('home', finalHomeArray, penData.currentSide === 'home' ? penData.currentIndex : -1);
-            renderTrack('away', finalAwayArray, penData.currentSide === 'away' ? penData.currentIndex : -1);
+                // Converte strings de texto separadas por vírgula em Array caso o painel envie como texto plano
+                const finalHomeArray = typeof homeShots === 'string' ? homeShots.split(',') : homeShots;
+                const finalAwayArray = typeof awayShots === 'string' ? awayShots.split(',') : awayShots;
+
+                // Renderizar as sequências visuais de bolinhas (✓ e ✕)
+                renderTrack('home', finalHomeArray, penData.currentSide === 'home' ? penData.currentIndex : -1);
+                renderTrack('away', finalAwayArray, penData.currentSide === 'away' ? penData.currentIndex : -1);
+            });
         });
 
         function renderTrack(side, shotsArray, activeIndex) {

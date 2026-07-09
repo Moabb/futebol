@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Overlay - Fim de Jogo</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Space+Grotesk:wght@500;700&family=Kanit:wght@600;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght=700;900&family=Space+Grotesk:wght=500;700&family=Kanit:wght=600;800&display=swap');
 
         /* Configuração de transparência absoluta para o OBS Studio */
         html, body {
@@ -235,81 +235,88 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const matchId = urlParams.get('match') || "jogo_padrao";
+        // ========================================================
+        // ESCUTA DA PARTIDA ATIVA EM TEMPO REAL
+        // ========================================================
+        const activeMatchRef = ref(db, 'activeMatchId');
 
-        const matchRef = ref(db, 'matches/' + matchId);
+        onValue(activeMatchRef, (snapshot) => {
+            const activeId = snapshot.val() || "jogo_padrao";
+            console.log("Tela final sincronizada na partida ativa:", activeId);
 
-        onValue(matchRef, (snapshot) => {
-            const data = snapshot.val();
-            if (!data) return;
+            const matchRef = ref(db, 'matches/' + activeId);
 
-            // 1. Controle de Visibilidade Baseado no Painel
-            const wrapper = document.getElementById('endgame-wrapper');
-            const isVisible = data.overlays && data.overlays.endgame;
+            onValue(matchRef, (matchSnapshot) => {
+                const data = matchSnapshot.val();
+                if (!data) return;
 
-            if (!isVisible) {
-                wrapper.classList.remove('visible');
-                return;
-            }
+                // 1. Controle de Visibilidade Baseado no Painel
+                const wrapper = document.getElementById('endgame-wrapper');
+                const isVisible = data.overlays && data.overlays.endgame;
 
-            // 2. Injetar Design e Cores Escolhidas do Painel
-            const design = data.config.design || { style: "cyber", primary: "#1e1b4b", secondary: "#0f172a", accent: "#f59e0b" };
-            document.documentElement.style.setProperty('--theme-primary', design.primary);
-            document.documentElement.style.setProperty('--theme-secondary', design.secondary);
-            document.documentElement.style.setProperty('--theme-accent', design.accent);
+                if (!isVisible) {
+                    wrapper.classList.remove('visible');
+                    return;
+                }
 
-            wrapper.className = 'visible';
-            wrapper.classList.add(`theme-${design.style}`);
+                // 2. Injetar Design e Cores Escolhidas do Painel
+                const design = data.config.design || { style: "cyber", primary: "#1e1b4b", secondary: "#0f172a", accent: "#f59e0b" };
+                document.documentElement.style.setProperty('--theme-primary', design.primary);
+                document.documentElement.style.setProperty('--theme-secondary', design.secondary);
+                document.documentElement.style.setProperty('--theme-accent', design.accent);
 
-            // Nomes e barras de cores estruturais
-            document.getElementById('txt-home-name').textContent = data.config.home.name;
-            document.getElementById('txt-away-name').textContent = data.config.away.name;
-            document.getElementById('color-home').style.backgroundColor = data.config.home.color1 || "#3b82f6";
-            document.getElementById('color-away').style.backgroundColor = data.config.away.color1 || "#ef4444";
+                wrapper.className = 'visible';
+                wrapper.classList.add(`theme-${design.style}`);
 
-            // 3. Aplicar Gols do Tempo Normal
-            const goalsHome = data.stats.home.goals || 0;
-            const goalsAway = data.stats.away.goals || 0;
-            document.getElementById('score-home').textContent = goalsHome;
-            document.getElementById('score-away').textContent = goalsAway;
+                // Nomes e barras de cores estruturais
+                document.getElementById('txt-home-name').textContent = data.config.home.name;
+                document.getElementById('txt-away-name').textContent = data.config.away.name;
+                document.getElementById('color-home').style.backgroundColor = data.config.home.color1 || "#3b82f6";
+                document.getElementById('color-away').style.backgroundColor = data.config.away.color1 || "#ef4444";
 
-            // 4. Verificar Estrutura de Pênaltis
-            const penData = data.penalties || {};
-            const homeShots = penData.home || (data.stats && data.stats.home && data.stats.home.penalties) || [];
-            const awayShots = penData.away || (data.stats && data.stats.away && data.stats.away.penalties) || [];
+                // 3. Aplicar Gols do Tempo Normal
+                const goalsHome = data.stats.home.goals || 0;
+                const goalsAway = data.stats.away.goals || 0;
+                document.getElementById('score-home').textContent = goalsHome;
+                document.getElementById('score-away').textContent = goalsAway;
 
-            const penGoalsHome = Array.isArray(homeShots) ? homeShots.filter(v => v === 'success').length : (data.stats?.home?.penaltyScore || 0);
-            const penGoalsAway = Array.isArray(awayShots) ? awayShots.filter(v => v === 'success').length : (data.stats?.away?.penaltyScore || 0);
+                // 4. Verificar Estrutura de Pênaltis
+                const penData = data.penalties || {};
+                const homeShots = penData.home || (data.stats && data.stats.home && data.stats.home.penalties) || [];
+                const awayShots = penData.away || (data.stats && data.stats.away && data.stats.away.penalties) || [];
 
-            // Regra: Exibe a caixa de pênaltis se houve cobranças gravadas ou se o placar de pênaltis for maior que zero
-            const hasPenalties = penGoalsHome > 0 || penGoalsAway > 0 || homeShots.length > 0 || awayShots.length > 0;
-            const penBox = document.getElementById('ui-penalties-box');
+                const penGoalsHome = Array.isArray(homeShots) ? homeShots.filter(v => v === 'success').length : (data.stats?.home?.penaltyScore || 0);
+                const penGoalsAway = Array.isArray(awayShots) ? awayShots.filter(v => v === 'success').length : (data.stats?.away?.penaltyScore || 0);
 
-            if (hasPenalties) {
-                penBox.style.display = 'block';
-                document.getElementById('pen-score-home').textContent = penGoalsHome;
-                document.getElementById('pen-score-away').textContent = penGoalsAway;
-            } else {
-                penBox.style.display = 'none';
-            }
+                // Regra: Exibe a caixa de pênaltis se houve cobranças gravadas ou se o placar de pênaltis for maior que zero
+                const hasPenalties = penGoalsHome > 0 || penGoalsAway > 0 || homeShots.length > 0 || awayShots.length > 0;
+                const penBox = document.getElementById('ui-penalties-box');
 
-            // 5. Determinar Quem é o Grande Vencedor da Partida para Destacar na Tela
-            const blockHome = document.getElementById('block-home');
-            const blockAway = document.getElementById('block-away');
-            
-            // Remove marcações antigas antes do cálculo
-            blockHome.classList.remove('winner');
-            blockAway.classList.remove('winner');
+                if (hasPenalties) {
+                    penBox.style.display = 'block';
+                    document.getElementById('pen-score-home').textContent = penGoalsHome;
+                    document.getElementById('pen-score-away').textContent = penGoalsAway;
+                } else {
+                    penBox.style.display = 'none';
+                }
 
-            const totalScoreHome = goalsHome + penGoalsHome;
-            const totalScoreAway = goalsAway + penGoalsAway;
+                // 5. Determinar Quem é o Grande Vencedor da Partida para Destacar na Tela
+                const blockHome = document.getElementById('block-home');
+                const blockAway = document.getElementById('block-away');
+                
+                // Remove marcações antigas antes do cálculo
+                blockHome.classList.remove('winner');
+                blockAway.classList.remove('winner');
 
-            if (totalScoreHome > totalScoreAway) {
-                blockHome.classList.add('winner');
-            } else if (totalScoreAway > totalScoreHome) {
-                blockAway.classList.add('winner');
-            }
+                const totalScoreHome = goalsHome + penGoalsHome;
+                const totalScoreAway = goalsAway + penGoalsAway;
+
+                if (totalScoreHome > totalScoreAway) {
+                    blockHome.classList.add('winner');
+                } else if (totalScoreAway > totalScoreHome) {
+                    blockAway.classList.add('winner');
+                }
+            });
         });
     </script>
 </body>
