@@ -714,43 +714,42 @@
 
         // Substitua a sua função connectToMatch antiga por esta:
         function connectToMatch() {
-            const inputId = document.getElementById('match-id-input').value.trim();
+            // 1. Verifica primeiro se há um novo jogo digitado; se não, pega o selecionado no menu drop-down
+            const selectEl = document.getElementById('match-id-select');
+            const inputNewEl = document.getElementById('match-id-new');
+            
+            let inputId = inputNewEl.value.trim();
             if (!inputId) {
-                alert("Por favor, digite um ID de partida válido.");
+                inputId = selectEl.value;
+            }
+
+            if (!inputId || inputId.startsWith("Carregando")) {
+                alert("Por favor, selecione ou digite um ID de partida válido.");
                 return;
             }
 
-            // Se o ID mudou, desconecta do nó anterior
-            if (matchId && matchId !== inputId && matchRef) {
-                // Firebase lida com a troca de listeners ao reatribuir o onValue
-            }
-
             matchId = inputId;
-            matchRef = ref(db, 'matches/' + matchId);
+            const matchRef = ref(db, 'matches/' + matchId);
 
-            // ========================================================
-            // AQUI ESTÁ A MÁGICA: Atualiza o nó global da partida ativa
-            // ========================================================
+            // 2. Atualiza o nó global da partida ativa para que o OBS mude de canal sozinho
             const activeMatchRef = ref(db, 'activeMatchId');
-            import("https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js").then(({ set }) => {
-                set(activeMatchRef, matchId);
-            });
-            // ========================================================
+            set(activeMatchRef, matchId);
 
-            document.getElementById('current-match-display').textContent = matchId;
-
-            // Remove o listener antigo se houver e aplica o novo
+            // 3. Ouve os dados da partida selecionada e popula o painel
             onValue(matchRef, (snapshot) => {
                 const data = snapshot.val();
                 if (!data) {
-                    // Se a partida não existir, cria uma estrutura básica para não quebrar
-                    createDefaultMatchStructure();
-                    return;
+                    // Se a partida for nova e não tiver dados, reseta o estado local para o padrão
+                    localState = JSON.parse(JSON.stringify(defaultState));
+                } else {
+                    localState = data;
                 }
-                localState = data;
                 updateUI();
             });
         }
+
+
+
         document.getElementById('btn-load-match').addEventListener('click', connectToMatch);
 
         document.getElementById('btn-clear-form').addEventListener('click', () => {
