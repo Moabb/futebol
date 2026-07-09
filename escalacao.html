@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Overlay - Escalação Oficial com Campo</title>
+    <title>1Overlay - Escalação Oficial com Campo</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght=700;900&family=Space+Grotesk:wght=500;700&family=Kanit:wght=600;800&display=swap');
 
@@ -288,7 +288,7 @@
         function renderLineup(data) {
             const wrapper = document.getElementById('lineup-wrapper');
             
-            // 1. Monitorar Visibilidade SEM travar a execução do resto do código
+            // 1. Verificar Visibilidade e Qual Time Exibir
             let isVisible = false;
             let targetTeam = 'home';
 
@@ -302,14 +302,14 @@
                 }
             }
             
-            // Gerencia as classes CSS de animação baseada no botão do painel
+            // Gerencia visibilidade suave sem matar o carregamento de dados
             if (isVisible) {
                 wrapper.classList.add('visible');
             } else {
                 wrapper.classList.remove('visible');
             }
             
-            // 2. Configurações Visuais e Temas (Garante que os estilos carreguem em background)
+            // 2. Aplicar Cores e Layouts do Design
             const design = data.config?.design || { style: "cyber", primary: "#1e1b4b", secondary: "#0f172a", accent: "#f59e0b" };
             wrapper.classList.remove('theme-cyber', 'theme-minimal', 'theme-monolith');
             wrapper.classList.add(`theme-${design.style || 'cyber'}`);
@@ -321,9 +321,8 @@
             if (!data.config || !data.config[targetTeam]) return;
 
             const teamConfig = data.config[targetTeam];
-            const teamStats = data.stats?.[targetTeam] || {};
 
-            // Cores das Badges laterais
+            // Cores das faixas laterais
             const c1 = teamConfig.color1 || "#3b82f6";
             const c2 = teamConfig.color2 || "#ffffff";
             document.getElementById('list-badge-c1').style.backgroundColor = c1;
@@ -333,33 +332,49 @@
             document.getElementById('list-team-name').textContent = teamConfig.name || "TIME";
             document.getElementById('coach-name').textContent = teamConfig.coach || "---";
 
-            // 3. Mapeamento do Objeto de Jogadores
-            const rawLineup = teamStats.lineup || {};
+            // 3. PROCESSADOR INTELIGENTE DA STRING DE JOGADORES (A Mágica acontece aqui!)
             let lineUpPlayers = [];
+            const rawPlayersString = teamConfig.players || "";
 
-            if (Array.isArray(rawLineup)) {
-                lineUpPlayers = rawLineup.filter(Boolean);
-            } else if (typeof rawLineup === 'object') {
-                lineUpPlayers = Object.entries(rawLineup).map(([playerName, details]) => {
-                    return {
-                        name: playerName,
-                        number: details.number ?? '',
-                        position: details.position ?? 'Linha',
-                        status: details.status ?? 'starter'
-                    };
+            if (rawPlayersString && typeof rawPlayersString === 'string') {
+                // Expressão regular fantástica para pescar padrões do tipo: "Número - Nome"
+                const regex = /(\d+)\s*-\s*([^0-9\-]+)/g;
+                let match;
+                
+                while ((match = regex.exec(rawPlayersString)) !== null) {
+                    const num = match[1].trim();
+                    const name = match[2].replace(/\s+-\s*$/, '').trim(); // Remove hífens órfãos no fim do nome
+                    
+                    if (name) {
+                        lineUpPlayers.push({
+                            number: num,
+                            name: name,
+                            // Assume de forma inteligente o primeiro jogador como goleiro (GK), o resto linha
+                            position: lineUpPlayers.length === 0 ? 'GK' : 'Linha'
+                        });
+                    }
+                }
+            }
+
+            // Se o processador por regex falhar por formatação, faz um split bruto de segurança
+            if (lineUpPlayers.length === 0 && rawPlayersString) {
+                const parts = rawPlayersString.split('-');
+                parts.forEach((part, index) => {
+                    const clean = part.trim();
+                    if (clean) {
+                        lineUpPlayers.push({
+                            number: index + 1,
+                            name: clean,
+                            position: index === 0 ? 'GK' : 'Linha'
+                        });
+                    }
                 });
             }
 
-            // Filtragem de Titulares
-            let starters = lineUpPlayers.filter(p => p.status === 'starter');
-            if (starters.length === 0) {
-                starters = lineUpPlayers.slice(0, 11);
-            }
+            // Pega os 11 primeiros para desenhar no campo e na lista de titulares
+            const starters = lineUpPlayers.slice(0, 11);
 
-            // Ordenação por número
-            starters.sort((a, b) => (parseInt(a.number) || 0) - (parseInt(b.number) || 0));
-
-            // 4. Renderizar Lista Textual (Esquerda)
+            // 4. Renderizar Lista Textual da Esquerda
             const listContainer = document.getElementById('players-list-container');
             listContainer.innerHTML = '';
 
@@ -368,22 +383,24 @@
                 row.className = 'player-row';
                 row.innerHTML = `
                     <div class="player-num">${p.number}</div>
-                    <div class="player-name">${String(p.name).toUpperCase()}</div>
+                    <div class="player-name">${p.name.toUpperCase()}</div>
                 `;
                 listContainer.appendChild(row);
             });
 
-            // 5. Renderizar o Campo Tático 3D (Direita)
+            // 5. Renderizar o Campo Tático Virtual da Direita
             const field = document.getElementById('tactical-field-container');
             field.innerHTML = '';
 
-            const goalkeeper = starters.find(p => p.position === 'GK' || String(p.name).toUpperCase().includes('GOLEIRO'));
-            const outfieldPlayers = starters.filter(p => p !== goalkeeper);
+            // Separa o primeiro elemento como Goleiro
+            const goalkeeper = starters[0];
+            const outfieldPlayers = starters.slice(1);
 
             if (goalkeeper) {
                 createFieldLine(field, [goalkeeper], c1, c2);
             }
 
+            // Distribuição dos outros 10 jogadores baseado na formação do painel (ex: "4-4-2")
             const scheme = teamConfig.formation || "4-4-2";
             const lineCounts = typeof scheme === 'string' ? scheme.split('-').map(num => parseInt(num) || 2) : [4, 4, 2];
 
@@ -410,12 +427,12 @@
                 const pEl = document.createElement('div');
                 pEl.className = 'field-player';
                 
-                const rawName = p.name ? String(p.name).trim() : 'JOGADOR';
-                const shortName = rawName.split(' ')[0];
+                // Pega apenas o primeiro nome para não amontoar no campo 3D
+                const shortName = p.name.split(' ')[0];
                 
                 pEl.innerHTML = `
                     <div class="player-shirt" style="background-color: ${color1}; color: ${color2};">
-                        ${p.number || ''}
+                        ${p.number}
                     </div>
                     <div class="player-field-name">${shortName.toUpperCase()}</div>
                 `;
