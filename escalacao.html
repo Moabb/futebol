@@ -269,9 +269,6 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // ========================================================
-        // LOGICA DE ESCUTA DA PARTIDA ATIVA
-        // ========================================================
         const activeMatchRef = ref(db, 'activeMatchId');
 
         onValue(activeMatchRef, (snapshot) => {
@@ -291,27 +288,41 @@
         function renderLineup(data) {
             const wrapper = document.getElementById('lineup-wrapper');
             
-            // 1. Controle Rigoroso de Exibição com Fallbacks seguros
-            const isVisible = data.overlays && data.overlays.escalacao && (data.overlays.escalacao.visible || data.overlays.escalacao === true);
-            
-            // 2. Sincronização Estável de Temas e Design
-            const design = data.config.design || { style: "cyber", primary: "#1e1b4b", secondary: "#0f172a", accent: "#f59e0b" };
-            wrapper.className = '';
-            if (isVisible) wrapper.classList.add('visible');
-            wrapper.classList.add(`theme-${design.style}`);
+            // 1. Verificação de Visibilidade do Overlay
+            let isVisible = false;
+            let targetTeam = 'home';
 
-            // Injetar variáveis CSS globais de cores
-            document.documentElement.style.setProperty('--theme-primary', design.primary);
-            document.documentElement.style.setProperty('--theme-secondary', design.secondary);
-            document.documentElement.style.setProperty('--theme-accent', design.accent);
-
-            // 3. Determinar qual time renderizar (casa ou visitante)
-            const targetTeam = (data.overlays && data.overlays.escalacao && data.overlays.escalacao.team === 'away') ? 'away' : 'home';
+            if (data.overlays && data.overlays.escalacao) {
+                if (typeof data.overlays.escalacao === 'object') {
+                    isVisible = data.overlays.escalacao.visible === true;
+                    targetTeam = data.overlays.escalacao.team === 'away' ? 'away' : 'home';
+                } else if (typeof data.overlays.escalacao === 'boolean') {
+                    isVisible = data.overlays.escalacao;
+                    targetTeam = data.overlays.activeTeamLineup || 'home';
+                }
+            }
             
-            if (!data.config || !data.config[targetTeam] || !data.stats || !data.stats[targetTeam]) return;
+            // Controle de Exibição
+            if (isVisible) {
+                wrapper.classList.add('visible');
+            } else {
+                wrapper.classList.remove('visible');
+                return;
+            }
+            
+            // 2. Configurações de Design Visual
+            const design = data.config?.design || { style: "cyber", primary: "#1e1b4b", secondary: "#0f172a", accent: "#f59e0b" };
+            wrapper.className = 'visible';
+            wrapper.classList.add(`theme-${design.style || 'cyber'}`);
+
+            document.documentElement.style.setProperty('--theme-primary', design.primary || '#1e1b4b');
+            document.documentElement.style.setProperty('--theme-secondary', design.secondary || '#0f172a');
+            document.documentElement.style.setProperty('--theme-accent', design.accent || '#f59e0b');
+
+            if (!data.config || !data.config[targetTeam]) return;
 
             const teamConfig = data.config[targetTeam];
-            const teamStats = data.stats[targetTeam];
+            const teamStats = data.stats?.[targetTeam] || {};
 
             // Cores das Badges laterais
             const c1 = teamConfig.color1 || "#3b82f6";
@@ -323,42 +334,61 @@
             document.getElementById('list-team-name').textContent = teamConfig.name || "TIME";
             document.getElementById('coach-name').textContent = teamConfig.coach || "---";
 
-            // 4. Renderizar Lista Textual da Esquerda
+            // 3. MAPEAMENTO REVOLUCIONADO DO BANCO (Suporta Objeto ou Lista)
+            const rawLineup = teamStats.lineup || {};
+            let lineUpPlayers = [];
+
+            if (Array.isArray(rawLineup)) {
+                lineUpPlayers = rawLineup.filter(Boolean);
+            } else if (typeof rawLineup === 'object') {
+                // No seu print, o nome do jogador é a chave (ex: "Adson")
+                lineUpPlayers = Object.entries(rawLineup).map(([playerName, details]) => {
+                    return {
+                        name: playerName,
+                        number: details.number ?? '',
+                        position: details.position ?? 'Linha',
+                        status: details.status ?? 'starter'
+                    };
+                });
+            }
+
+            // Filtragem de Titulares (Tolerante: Se ninguém estiver marcado, exibe todos os 11 primeiros)
+            let starters = lineUpPlayers.filter(p => p.status === 'starter');
+            if (starters.length === 0) {
+                starters = lineUpPlayers.slice(0, 11);
+            }
+
+            // Ordenação por número da camisa
+            starters.sort((a, b) => (parseInt(a.number) || 0) - (parseInt(b.number) || 0));
+
+            // 4. Renderizar Lista Textual (Esquerda)
             const listContainer = document.getElementById('players-list-container');
             listContainer.innerHTML = '';
-
-            const lineUpPlayers = teamStats.lineup || [];
-            
-            // Filtra e ordena Titulares (1 a 11 ordenados por número)
-            const starters = lineUpPlayers
-                .filter(p => p.status === 'starter')
-                .sort((a, b) => (parseInt(a.number) || 0) - (parseInt(b.number) || 0));
 
             starters.forEach(p => {
                 const row = document.createElement('div');
                 row.className = 'player-row';
                 row.innerHTML = `
                     <div class="player-num">${p.number}</div>
-                    <div class="player-name">${p.name}</div>
+                    <div class="player-name">${String(p.name).toUpperCase()}</div>
                 `;
                 listContainer.appendChild(row);
             });
 
-            // 5. Renderizar o Campo Tático 3D da Direita
+            // 5. Renderizar o Campo Tático 3D (Direita)
             const field = document.getElementById('tactical-field-container');
             field.innerHTML = '';
 
-            // Localiza o Goleiro
-            const goalkeeper = starters.find(p => p.position === 'GK');
-            // Jogadores de Linha
-            const outfieldPlayers = starters.filter(p => p.position !== 'GK');
+            // Acha o Goleiro pela posição (GK) ou caso o nome contenha 'goleiro'
+            const goalkeeper = starters.find(p => p.position === 'GK' || String(p.name).toUpperCase().includes('GOLEIRO'));
+            const outfieldPlayers = starters.filter(p => p !== goalkeeper);
 
-            // Se houver goleiro, cria sua linha tática na base do campo
+            // Goleiro na base do campo
             if (goalkeeper) {
                 createFieldLine(field, [goalkeeper], c1, c2);
             }
 
-            // Descobrir o esquema tático (Ex: "4-3-3")
+            // Divisão das linhas com base no esquema tático (Ex: "4-4-2")
             const scheme = teamConfig.formation || "4-4-2";
             const lineCounts = typeof scheme === 'string' ? scheme.split('-').map(num => parseInt(num) || 2) : [4, 4, 2];
 
@@ -385,13 +415,14 @@
                 const pEl = document.createElement('div');
                 pEl.className = 'field-player';
                 
-                const shortName = p.name ? p.name.trim().split(' ')[0] : '-';
+                const rawName = p.name ? String(p.name).trim() : 'JOGADOR';
+                const shortName = rawName.split(' ')[0];
                 
                 pEl.innerHTML = `
                     <div class="player-shirt" style="background-color: ${color1}; color: ${color2};">
                         ${p.number || ''}
                     </div>
-                    <div class="player-field-name">${shortName}</div>
+                    <div class="player-field-name">${shortName.toUpperCase()}</div>
                 `;
                 line.appendChild(pEl);
             });
