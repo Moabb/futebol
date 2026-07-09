@@ -26,7 +26,7 @@
             height: 720px;
             display: grid;
             grid-template-columns: 420px 1fr;
-            gap: 40px;\r
+            gap: 40px;
             padding: 40px;
             box-sizing: border-box;
             opacity: 0;
@@ -210,7 +210,7 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
 
-        /* ESTILIZAÇÕES ESPECÍFICAS DE ESTILOS (IGUAL AO PLACAR) */
+        /* ESTILIZAÇÕES ESPECÍFICAS DE ESTILOS */
         .theme-minimal .list-panel {
             transform: skewX(-6deg);
             border-radius: 0;
@@ -239,8 +239,7 @@
                 <div class="team-title" id="list-team-name">CASA</div>
             </div>
 
-            <div class="players-scroll" id="players-list-container">
-                </div>
+            <div class="players-scroll" id="players-list-container"></div>
 
             <div class="coach-row">
                 <div class="coach-label">TÉCNICO:</div>
@@ -249,8 +248,7 @@
         </div>
 
         <div class="field-panel">
-            <div class="tactical-field" id="tactical-field-container">
-                </div>
+            <div class="tactical-field" id="tactical-field-container"></div>
         </div>
     </div>
 
@@ -272,7 +270,7 @@
         const db = getDatabase(app);
 
         // ========================================================
-        // LOGICA DE ESCUTA INTELIGENTE E DINÂMICA DA PARTIDA ATIVA
+        // LOGICA DE ESCUTA DA PARTIDA ATIVA
         // ========================================================
         const activeMatchRef = ref(db, 'activeMatchId');
 
@@ -293,8 +291,8 @@
         function renderLineup(data) {
             const wrapper = document.getElementById('lineup-wrapper');
             
-            // 1. Controle Rigoroso de Exibição
-            const isVisible = data.overlays && data.overlays.escalacao && data.overlays.escalacao.visible;
+            // 1. Controle Rigoroso de Exibição com Fallbacks seguros
+            const isVisible = data.overlays && data.overlays.escalacao && (data.overlays.escalacao.visible || data.overlays.escalacao === true);
             
             // 2. Sincronização Estável de Temas e Design
             const design = data.config.design || { style: "cyber", primary: "#1e1b4b", secondary: "#0f172a", accent: "#f59e0b" };
@@ -308,7 +306,10 @@
             document.documentElement.style.setProperty('--theme-accent', design.accent);
 
             // 3. Determinar qual time renderizar (casa ou visitante)
-            const targetTeam = (data.overlays.escalacao.team === 'away') ? 'away' : 'home';
+            const targetTeam = (data.overlays && data.overlays.escalacao && data.overlays.escalacao.team === 'away') ? 'away' : 'home';
+            
+            if (!data.config || !data.config[targetTeam] || !data.stats || !data.stats[targetTeam]) return;
+
             const teamConfig = data.config[targetTeam];
             const teamStats = data.stats[targetTeam];
 
@@ -359,7 +360,7 @@
 
             // Descobrir o esquema tático (Ex: "4-3-3")
             const scheme = teamConfig.formation || "4-4-2";
-            const lineCounts = scheme.split('-').map(num => parseInt(num) || 2);
+            const lineCounts = typeof scheme === 'string' ? scheme.split('-').map(num => parseInt(num) || 2) : [4, 4, 2];
 
             let playerIndex = 0;
             lineCounts.forEach(count => {
@@ -384,16 +385,17 @@
                 const pEl = document.createElement('div');
                 pEl.className = 'field-player';
                 
+                const shortName = p.name ? p.name.trim().split(' ')[0] : '-';
+                
                 pEl.innerHTML = `
                     <div class="player-shirt" style="background-color: ${color1}; color: ${color2};">
-                        ${p.number}
+                        ${p.number || ''}
                     </div>
-                    <div class="player-field-name">${p.name.split(' ')[0]}</div>
+                    <div class="player-field-name">${shortName}</div>
                 `;
                 line.appendChild(pEl);
             });
 
-            // Insere antes do primeiro elemento existente (empurrando o ataque para cima e goleiro para baixo)
             fieldContainer.insertBefore(line, fieldContainer.firstChild);
         }
     </script>
