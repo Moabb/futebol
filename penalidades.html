@@ -288,8 +288,10 @@
             const trackContainer = document.getElementById(`track-${side}`);
             trackContainer.innerHTML = '';
 
-            // Limpa arrays inválidos ou vazios
-            const cleanShots = Array.isArray(shotsArray) ? shotsArray.filter(v => v === 'success' || v === 'miss') : [];
+            // Garante que o array existe e limpa os valores convertendo tudo para MAIÚSCULO para bater com o painel
+            const cleanShots = Array.isArray(shotsArray) 
+                ? shotsArray.filter(v => v).map(v => String(v).toUpperCase().trim()) 
+                : [];
 
             // Mantém o layout mínimo com 5 bolinhas na tela
             const totalSlots = Math.max(5, cleanShots.length + (activeIndex !== -1 ? 1 : 0));
@@ -299,14 +301,15 @@
                 slot.className = 'ball-slot';
                 slot.textContent = i + 1;
 
-                if (cleanShots[i] === 'success') {
+                // VALIDAÇÃO CORRIGIDA: Agora aceita "SUCCESS" e "MISS" vindo do painel de controle
+                if (cleanShots[i] === 'SUCCESS') {
                     slot.className = 'ball-slot success';
                     slot.innerHTML = '✓';
-                } else if (cleanShots[i] === 'miss') {
+                } else if (cleanShots[i] === 'MISS') {
                     slot.className = 'ball-slot miss';
                     slot.innerHTML = '✕';
                 } else if (i === activeIndex) {
-                    slot.className = 'ball-slot next'; // Indicador de quem está cobrando agora
+                    slot.className = 'ball-slot next'; // Indicador piscante de quem está cobrando agora
                 }
 
                 trackContainer.appendChild(slot);
