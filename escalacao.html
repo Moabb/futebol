@@ -141,15 +141,15 @@
 
         .tactical-field {
             width: 100%;
-            height: 580px;
+            height: 1080px;
             background: #155e75; /* Gramado */
             background-image: linear-gradient(rgba(255,255,255,0.05) 50%, transparent 50%);
             background-size: 100% 60px;
             border: 4px solid #ffffff;
             border-radius: 12px;
             box-shadow: 0 30px 60px rgba(0,0,0,0.6), inset 0 0 100px rgba(0,0,0,0.6);
-            transform: rotateX(20deg);
-            transform-style: preserve-3d;
+            /*transform: rotateX(20deg);
+            transform-style: preserve-3d;*/
             position: relative;
             display: flex;
             flex-direction: column;
@@ -305,16 +305,16 @@
         function renderLineup(data) {
             const wrapper = document.getElementById('lineup-wrapper');
             
-            // 1. MAPEAMENTO DE EXIBIÇÃO SEGUNDO O SEU PRINT REAL DO FIREBASE
+            // 1. MAPEAMENTO DE EXIBIÇÃO CORRIGIDO (Letras minúsculas para alinhar com o painel)
             let isVisible = false;
             let targetTeam = 'home';
 
             if (data.overlays) {
-                // Se LineupHome for true, exibe o mandante. Se LineupAway for true, exibe o visitante.
-                if (data.overlays.LineupHome === true) {
+                // Se lineupHome for true, exibe o mandante. Se lineupAway for true, exibe o visitante.
+                if (data.overlays.lineupHome === true) {
                     isVisible = true;
                     targetTeam = 'home';
-                } else if (data.overlays.LineupAway === true) {
+                } else if (data.overlays.lineupAway === true) {
                     isVisible = true;
                     targetTeam = 'away';
                 }
@@ -387,7 +387,7 @@
                 });
             }
 
-            const starters = lineUpPlayers.slice(0, 11);
+            const starters = lineUpPlayers.slice(0, 18);
 
             // 4. RENDERIZAR LISTA LATERAL (ESQUERDA)
             const listContainer = document.getElementById('players-list-container');
@@ -414,20 +414,21 @@
                 createFieldLine(field, [goalkeeper], c1, c2);
             }
 
-            const scheme = teamConfig.formation || "4-4-2";
+            // AJUSTADO: Agora lê 'tactic' vindo do painel de controle
+            const scheme = teamConfig.tactic || teamConfig.formation || "4-4-2";
             const lineCounts = typeof scheme === 'string' ? scheme.split('-').map(num => parseInt(num) || 2) : [4, 4, 2];
 
             let playerIndex = 0;
             lineCounts.forEach(count => {
-                const playersInLine = [];
+                const currentLinePlayers = [];
                 for (let i = 0; i < count; i++) {
                     if (outfieldPlayers[playerIndex]) {
-                        playersInLine.push(outfieldPlayers[playerIndex]);
+                        currentLinePlayers.push(outfieldPlayers[playerIndex]);
                         playerIndex++;
                     }
                 }
-                if (playersInLine.length > 0) {
-                    createFieldLine(field, playersInLine, c1, c2);
+                if (currentLinePlayers.length > 0) {
+                    createFieldLine(field, currentLinePlayers, c1, c2);
                 }
             });
         }
