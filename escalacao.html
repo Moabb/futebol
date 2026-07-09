@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>1Overlay - Escalação Oficial com Campo</title>
+    <title>Overlay - Escalação Oficial com Campo</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght=700;900&family=Space+Grotesk:wght=500;700&family=Kanit:wght=600;800&display=swap');
 
@@ -21,7 +21,7 @@
             position: absolute;
             top: 50%;
             left: 50%;
-            transform: translate(-50%, -50%); /* Ajustado para centralizar direto */
+            transform: translate(-50%, -60%);
             width: 1280px;
             height: 720px;
             display: grid;
@@ -29,14 +29,16 @@
             gap: 40px;
             padding: 40px;
             box-sizing: border-box;
-            opacity: 1 !important; /* Força o overlay a ficar visível */
+            opacity: 0; /* Começa oculto e obedece o painel */
+            pointer-events: none;
             transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        /* Mantido por compatibilidade com o painel */
+        /* Ativado dinamicamente pelo painel */
         #lineup-wrapper.visible {
-            opacity: 1 !important;
+            opacity: 1;
             transform: translate(-50%, -50%);
+            pointer-events: auto;
         }
 
         /* PAINEL ESQUERDO: LISTA DE JOGADORES */
@@ -128,7 +130,7 @@
             font-size: 14px;
         }
 
-        /* PAINEL DIREITO: CAMPO TÁTICO 3D VIRTUAL */
+        /* PAINEL DIREITO: CAMPO TÁTICO ESTILIZADO */
         .field-panel {
             position: relative;
             perspective: 1200px;
@@ -140,11 +142,13 @@
         .tactical-field {
             width: 100%;
             height: 580px;
-            background: rgba(16, 185, 129, 0.2);
-            border: 4px solid rgba(255,255,255,0.6);
-            border-radius: 8px;
-            box-shadow: 0 30px 60px rgba(0,0,0,0.4), inset 0 0 100px rgba(0,0,0,0.5);
-            transform: rotateX(25deg);
+            background: #155e75; /* Gramado */
+            background-image: linear-gradient(rgba(255,255,255,0.05) 50%, transparent 50%);
+            background-size: 100% 60px;
+            border: 4px solid #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.6), inset 0 0 100px rgba(0,0,0,0.6);
+            transform: rotateX(20deg);
             transform-style: preserve-3d;
             position: relative;
             display: flex;
@@ -152,10 +156,9 @@
             justify-content: space-between;
             padding: 40px 0;
             box-sizing: border-box;
-            backdrop-filter: blur(4px);
         }
 
-        /* Linhas do Campo */
+        /* Linha do meio de campo */
         .tactical-field::before {
             content: '';
             position: absolute;
@@ -163,8 +166,21 @@
             left: 0;
             width: 100%;
             height: 4px;
-            background: rgba(255,255,255,0.6);
+            background: rgba(255,255,255,0.8);
             transform: translateY(-50%);
+        }
+
+        /* Círculo central */
+        .tactical-field::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 160px;
+            height: 160px;
+            border: 4px solid rgba(255,255,255,0.8);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
         }
 
         .field-line {
@@ -172,7 +188,7 @@
             justify-content: space-around;
             align-items: center;
             width: 100%;
-            z-index: 2;
+            z-index: 5;
             transform-style: preserve-3d;
         }
 
@@ -180,35 +196,36 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            transform: rotateX(-25deg) translateZ(20px);
+            transform: rotateX(-20deg) translateZ(25px);
             transition: all 0.5s ease;
         }
 
         .player-shirt {
-            width: 46px;
-            height: 46px;
+            width: 50px;
+            height: 50px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-family: 'Orbitron', sans-serif;
             font-weight: 900;
-            font-size: 18px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
-            border: 2px solid #ffffff;
+            font-size: 20px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            border: 3px solid #ffffff;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
         }
 
         .player-field-name {
-            background: rgba(15, 23, 42, 0.9);
-            padding: 3px 10px;
+            background: rgba(15, 23, 42, 0.95);
+            padding: 4px 12px;
             border-radius: 4px;
             font-size: 13px;
             font-weight: 700;
             margin-top: 8px;
             text-transform: uppercase;
-            border: 1px solid rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
             white-space: nowrap;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
         }
 
         /* TEMAS ADAPTATIVOS */
@@ -229,7 +246,7 @@
 </head>
 <body>
 
-    <div id="lineup-wrapper" class="theme-cyber">
+    <div id="lineup-wrapper">
         <div class="list-panel">
             <div class="team-header">
                 <div class="badge-indicator">
@@ -288,28 +305,29 @@
         function renderLineup(data) {
             const wrapper = document.getElementById('lineup-wrapper');
             
-            // 1. Verificar Visibilidade e Qual Time Exibir
+            // 1. MAPEAMENTO DE EXIBIÇÃO SEGUNDO O SEU PRINT REAL DO FIREBASE
             let isVisible = false;
             let targetTeam = 'home';
 
-            if (data.overlays && data.overlays.escalacao) {
-                if (typeof data.overlays.escalacao === 'object') {
-                    isVisible = data.overlays.escalacao.visible === true;
-                    targetTeam = data.overlays.escalacao.team === 'away' ? 'away' : 'home';
-                } else if (typeof data.overlays.escalacao === 'boolean') {
-                    isVisible = data.overlays.escalacao;
-                    targetTeam = data.overlays.activeTeamLineup || 'home';
+            if (data.overlays) {
+                // Se LineupHome for true, exibe o mandante. Se LineupAway for true, exibe o visitante.
+                if (data.overlays.LineupHome === true) {
+                    isVisible = true;
+                    targetTeam = 'home';
+                } else if (data.overlays.LineupAway === true) {
+                    isVisible = true;
+                    targetTeam = 'away';
                 }
             }
             
-            // Gerencia visibilidade suave sem matar o carregamento de dados
+            // Gerencia de forma dinâmica a visibilidade
             if (isVisible) {
                 wrapper.classList.add('visible');
             } else {
                 wrapper.classList.remove('visible');
             }
             
-            // 2. Aplicar Cores e Layouts do Design
+            // 2. CONFIGURAÇÕES VISUAIS DE DESIGN E TEMA
             const design = data.config?.design || { style: "cyber", primary: "#1e1b4b", secondary: "#0f172a", accent: "#f59e0b" };
             wrapper.classList.remove('theme-cyber', 'theme-minimal', 'theme-monolith');
             wrapper.classList.add(`theme-${design.style || 'cyber'}`);
@@ -322,41 +340,39 @@
 
             const teamConfig = data.config[targetTeam];
 
-            // Cores das faixas laterais
+            // Cores das faixas laterais do time selecionado
             const c1 = teamConfig.color1 || "#3b82f6";
             const c2 = teamConfig.color2 || "#ffffff";
             document.getElementById('list-badge-c1').style.backgroundColor = c1;
             document.getElementById('badge-stripe-c2').style.backgroundColor = c2;
 
-            // Nome do Time e Técnico
+            // Nome do Time e Técnico dinâmicos
             document.getElementById('list-team-name').textContent = teamConfig.name || "TIME";
             document.getElementById('coach-name').textContent = teamConfig.coach || "---";
 
-            // 3. PROCESSADOR INTELIGENTE DA STRING DE JOGADORES (A Mágica acontece aqui!)
+            // 3. PROCESSADOR INTELIGENTE DA STRING DE JOGADORES DO TIME ALVO
             let lineUpPlayers = [];
             const rawPlayersString = teamConfig.players || "";
 
             if (rawPlayersString && typeof rawPlayersString === 'string') {
-                // Expressão regular fantástica para pescar padrões do tipo: "Número - Nome"
                 const regex = /(\d+)\s*-\s*([^0-9\-]+)/g;
                 let match;
                 
                 while ((match = regex.exec(rawPlayersString)) !== null) {
                     const num = match[1].trim();
-                    const name = match[2].replace(/\s+-\s*$/, '').trim(); // Remove hífens órfãos no fim do nome
+                    const name = match[2].replace(/\s+-\s*$/, '').trim();
                     
                     if (name) {
                         lineUpPlayers.push({
                             number: num,
                             name: name,
-                            // Assume de forma inteligente o primeiro jogador como goleiro (GK), o resto linha
                             position: lineUpPlayers.length === 0 ? 'GK' : 'Linha'
                         });
                     }
                 }
             }
 
-            // Se o processador por regex falhar por formatação, faz um split bruto de segurança
+            // Fallback caso a formatação mude
             if (lineUpPlayers.length === 0 && rawPlayersString) {
                 const parts = rawPlayersString.split('-');
                 parts.forEach((part, index) => {
@@ -371,10 +387,9 @@
                 });
             }
 
-            // Pega os 11 primeiros para desenhar no campo e na lista de titulares
             const starters = lineUpPlayers.slice(0, 11);
 
-            // 4. Renderizar Lista Textual da Esquerda
+            // 4. RENDERIZAR LISTA LATERAL (ESQUERDA)
             const listContainer = document.getElementById('players-list-container');
             listContainer.innerHTML = '';
 
@@ -388,11 +403,10 @@
                 listContainer.appendChild(row);
             });
 
-            // 5. Renderizar o Campo Tático Virtual da Direita
+            // 5. RENDERIZAR O CAMPO TÁTICO VIRTUAL COM CORES E GRAMADO (DIREITA)
             const field = document.getElementById('tactical-field-container');
             field.innerHTML = '';
 
-            // Separa o primeiro elemento como Goleiro
             const goalkeeper = starters[0];
             const outfieldPlayers = starters.slice(1);
 
@@ -400,7 +414,6 @@
                 createFieldLine(field, [goalkeeper], c1, c2);
             }
 
-            // Distribuição dos outros 10 jogadores baseado na formação do painel (ex: "4-4-2")
             const scheme = teamConfig.formation || "4-4-2";
             const lineCounts = typeof scheme === 'string' ? scheme.split('-').map(num => parseInt(num) || 2) : [4, 4, 2];
 
@@ -427,7 +440,6 @@
                 const pEl = document.createElement('div');
                 pEl.className = 'field-player';
                 
-                // Pega apenas o primeiro nome para não amontoar no campo 3D
                 const shortName = p.name.split(' ')[0];
                 
                 pEl.innerHTML = `
