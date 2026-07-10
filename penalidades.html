@@ -113,7 +113,7 @@
             box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
         }
 
-        /* GOL (Valor 1) */
+        /* GOL (Valor 1 no Firebase) */
         .ball-slot.success {
             background: radial-gradient(circle at 35% 35%, #10b981 0%, #047857 100%) !important;
             border-color: #34d399 !important;
@@ -124,7 +124,7 @@
             transform: scale(1.05);
         }
 
-        /* ERROU (Valor 2) */
+        /* ERROU (Valor 2 no Firebase) */
         .ball-slot.miss {
             background: radial-gradient(circle at 35% 35%, #ef4444 0%, #b91c1c 100%) !important;
             border-color: #f87171 !important;
@@ -135,7 +135,7 @@
             transform: scale(1.05);
         }
 
-        /* PRÓXIMO BATEDOR ATIVO */
+        /* PRÓXIMO BATEDOR ATIVO (PISCANTE) */
         .ball-slot.next {
             background: rgba(245, 158, 11, 0.15) !important;
             border-color: #f59e0b !important;
@@ -206,6 +206,7 @@
                 const data = matchSnapshot.val();
                 if (!data) return;
 
+                // Nomes e cores do painel
                 const configHome = data.config?.home || {};
                 const configAway = data.config?.away || {};
 
@@ -215,6 +216,7 @@
                 document.getElementById('color-home').style.backgroundColor = configHome.color1 || "#3b82f6";
                 document.getElementById('color-away').style.backgroundColor = configAway.color1 || "#ef4444";
 
+                // Controle de exibição da tela
                 const wrapper = document.getElementById('penalties-wrapper');
                 if (data.overlays?.penalties === true) {
                     wrapper.classList.add('visible');
@@ -224,10 +226,12 @@
 
                 const penData = data.penalties || {};
 
-                // Transforma objetos indexados em Arrays organizados mantendo os números puros
+                // SOLUÇÃO DO MAP: Converte OBJETOS indexados em Arrays reais de forma 100% garantida
                 const getSortedShots = (shotsObj) => {
                     if (!shotsObj) return [];
                     if (Array.isArray(shotsObj)) return shotsObj;
+                    
+                    // Se for um objeto, extrai os valores ordenando pelas chaves numéricas
                     return Object.keys(shotsObj)
                         .sort((a, b) => parseInt(a) - parseInt(b))
                         .map(key => shotsObj[key]);
@@ -236,8 +240,12 @@
                 const finalHomeArray = getSortedShots(penData.shotsHome);
                 const finalAwayArray = getSortedShots(penData.shotsAway);
 
-                renderTrack('home', finalHomeArray, penData.currentSide === 'home' ? penData.currentIndex : -1);
-                renderTrack('away', finalAwayArray, penData.currentSide === 'away' ? penData.currentIndex : -1);
+                // Lendo batedor atual e lado
+                const activeIndex = (penData.currentShot !== undefined) ? parseInt(penData.currentShot) : -1;
+                const currentTeam = penData.currentTeam || '';
+
+                renderTrack('home', finalHomeArray, currentTeam === 'home' ? activeIndex : -1);
+                renderTrack('away', finalAwayArray, currentTeam === 'away' ? activeIndex : -1);
             });
         });
 
@@ -245,22 +253,21 @@
             const trackContainer = document.getElementById(`track-${side}`);
             trackContainer.innerHTML = '';
 
-            // Processa o array transformando cada elemento em string de número pura ('0', '1', '2')
-            const cleanShots = shotsArray.map(item => {
+            // Agora garantido que shotsArray é um array real antes de fazer o map
+            const cleanShots = (shotsArray || []).map(item => {
                 if (item === null || item === undefined) return '0';
-                const value = (typeof item === 'object' && item.status) ? item.status : item;
-                return String(value).trim();
+                return String(item).trim();
             });
 
-            // Mantém as 5 bolinhas estáticas do padrão visual na tela
-            const totalSlots = Math.max(5, cleanShots.length + (activeIndex !== -1 ? 1 : 0));
+            // Determina a quantidade de slots (mínimo 5)
+            const totalSlots = Math.max(5, cleanShots.length);
 
             for (let i = 0; i < totalSlots; i++) {
                 const slot = document.createElement('div');
                 slot.className = 'ball-slot';
                 slot.textContent = i + 1;
 
-                // MAPEAMENTO NUMÉRICO CORRIGIDO DE ACORDO COM O SEU BANCO
+                // Verificação numérica ('1' = gol, '2' = erro)
                 if (cleanShots[i] === '1') {
                     slot.className = 'ball-slot success';
                     slot.innerHTML = '✓';
@@ -268,7 +275,7 @@
                     slot.className = 'ball-slot miss';
                     slot.innerHTML = '✕';
                 } else if (i === activeIndex) {
-                    slot.className = 'ball-slot next'; // Efeito pisca amarela no batedor atual
+                    slot.className = 'ball-slot next'; // Batedor da vez piscando
                 }
 
                 trackContainer.appendChild(slot);
