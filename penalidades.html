@@ -135,7 +135,7 @@
             transform: scale(1.05);
         }
 
-        /* PRÓXIMO BATEDOR (PISCANTE AMRELO) */
+        /* BATEDOR ATUAL ATIVO */
         .ball-slot.next {
             background: rgba(245, 158, 11, 0.15);
             border-color: #f59e0b;
@@ -206,7 +206,7 @@
                 const data = matchSnapshot.val();
                 if (!data) return;
 
-                // 1. Renderiza os nomes e cores dos times nas penalidades (IDs Corrigidos para casar com o HTML)
+                // 1. Atualiza dados de design, nomes e cores
                 const configHome = data.config?.home || {};
                 const configAway = data.config?.away || {};
 
@@ -216,7 +216,7 @@
                 document.getElementById('color-home').style.backgroundColor = configHome.color1 || "#3b82f6";
                 document.getElementById('color-away').style.backgroundColor = configAway.color1 || "#ef4444";
 
-                // 2. Controla a visibilidade geral da overlay de Pênaltis
+                // 2. Gerencia a visibilidade da tela de pênaltis
                 const wrapper = document.getElementById('penalties-wrapper');
                 if (data.overlays?.penalties === true) {
                     wrapper.classList.add('visible');
@@ -224,16 +224,24 @@
                     wrapper.classList.remove('visible');
                 }
 
-                // 3. Puxa os dados brutos de pênaltis do Firebase
+                // 3. Captura e organiza as cobranças em ordem numérica estável (0, 1, 2...)
                 const penData = data.penalties || {};
-                
-                // Converte os objetos de cobrança do Firebase em arrays tratáveis de forma segura
-                const rawHome = penData.shotsHome ? (Array.isArray(penData.shotsHome) ? penData.shotsHome : Object.values(penData.shotsHome)) : [];
-                const rawAway = penData.shotsAway ? (Array.isArray(penData.shotsAway) ? penData.shotsAway : Object.values(penData.shotsAway)) : [];
 
-                // 4. Renderiza as esteiras passando os dados brutos e o batedor da vez
-                renderTrack('home', rawHome, penData.currentSide === 'home' ? penData.currentIndex : -1);
-                renderTrack('away', rawAway, penData.currentSide === 'away' ? penData.currentIndex : -1);
+                const getSortedShots = (shotsObj) => {
+                    if (!shotsObj) return [];
+                    // Se já for array, retorna ele, senão pega as chaves ordenadas para não perder a sequência
+                    if (Array.isArray(shotsObj)) return shotsObj;
+                    return Object.keys(shotsObj)
+                        .sort((a, b) => parseInt(a) - parseInt(b))
+                        .map(key => shotsObj[key]);
+                };
+
+                const finalHomeArray = getSortedShots(penData.shotsHome);
+                const finalAwayArray = getSortedShots(penData.shotsAway);
+
+                // 4. Renderiza as esteiras passando as variáveis corretas
+                renderTrack('home', finalHomeArray, penData.currentSide === 'home' ? penData.currentIndex : -1);
+                renderTrack('away', finalAwayArray, penData.currentSide === 'away' ? penData.currentIndex : -1);
             });
         });
 
@@ -241,14 +249,14 @@
             const trackContainer = document.getElementById(`track-${side}`);
             trackContainer.innerHTML = '';
 
-            // Mapeia e extrai o status estruturado do objeto do Firebase sem jogar fora as linhas
+            // Extrai o campo status ('SUCCESS' ou 'MISS') de dentro do objeto enviado pelo painel
             const cleanShots = shotsArray.map(item => {
                 if (!item) return '';
                 const value = (typeof item === 'object' && item.status) ? item.status : item;
                 return String(value).toUpperCase().trim();
             });
 
-            // Garante o layout visual mínimo estável de 5 bolinhas na tela
+            // Mantém sempre no mínimo 5 posições visíveis na tela
             const totalSlots = Math.max(5, cleanShots.length + (activeIndex !== -1 ? 1 : 0));
 
             for (let i = 0; i < totalSlots; i++) {
@@ -256,7 +264,6 @@
                 slot.className = 'ball-slot';
                 slot.textContent = i + 1;
 
-                // Aplicação correta de cores conforme o status tratado do Firebase
                 if (cleanShots[i] === 'SUCCESS') {
                     slot.className = 'ball-slot success';
                     slot.innerHTML = '✓';
@@ -264,7 +271,7 @@
                     slot.className = 'ball-slot miss';
                     slot.innerHTML = '✕';
                 } else if (i === activeIndex) {
-                    slot.className = 'ball-slot next'; // Bolinha amarela animada da cobrança atual
+                    slot.className = 'ball-slot next'; // Efeito piscante no batedor da vez
                 }
 
                 trackContainer.appendChild(slot);
