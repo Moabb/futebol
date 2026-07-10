@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>1Overlay - Disputa de Pênaltis</title>
+    <title>Overlay - Disputa de Pênaltis</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght=700;900&family=Space+Grotesk:wght=500;700&family=Kanit:wght=600;800&display=swap');
 
@@ -265,10 +265,10 @@
                 slot.textContent = i + 1;
 
                 // Verificação exata baseada nos textos enviados pelo seu painel (index.html)
-                if (cleanShots[i] === 'SUCCESS') {
+                if (cleanShots[i] === '1') {
                     slot.className = 'ball-slot success';
                     slot.innerHTML = '✓';
-                } else if (cleanShots[i] === 'MISS') {
+                } else if (cleanShots[i] === '2') {
                     slot.className = 'ball-slot miss';
                     slot.innerHTML = '✕';
                 } else if (i === activeIndex) {
