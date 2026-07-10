@@ -79,7 +79,6 @@
             transition: all 0.5s ease;
         }
 
-        /* Efeito brilhante para destacar o vencedor da partida */
         .team-block.winner {
             background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(255,255,255,0.02) 100%);
             border-color: rgba(245, 158, 11, 0.4);
@@ -123,14 +122,14 @@
             letter-spacing: 2px;
         }
 
-        /* Caixa de Resultados de Pênaltis Ocultável */
+        /* Caixa de Resultados de Pênaltis */
         .penalties-box {
             margin-top: 35px;
             padding: 15px 40px;
             background: rgba(0, 0, 0, 0.4);
             border-radius: 12px;
             border: 1px dashed rgba(245, 158, 11, 0.3);
-            display: none; /* Controlado dinamicamente via JS */
+            display: none;
             animation: fadeIn 0.5s ease;
         }
 
@@ -236,9 +235,15 @@
                 document.getElementById('color-home').style.backgroundColor = configHome.color1 || "#3b82f6";
                 document.getElementById('color-away').style.backgroundColor = configAway.color1 || "#ef4444";
 
-                // 2. Leitura dos Gols do Tempo Regular
-                const goalsHome = parseInt(data.score?.home ?? 0);
-                const goalsAway = parseInt(data.score?.away ?? 0);
+                // 2. CORREÇÃO DA LEITURA DOS GOLS (Tratando como número direto para evitar quebra)
+                let goalsHome = 0;
+                let goalsAway = 0;
+
+                if (data.score) {
+                    goalsHome = data.score.home !== undefined ? parseInt(data.score.home) : 0;
+                    goalsAway = data.score.away !== undefined ? parseInt(data.score.away) : 0;
+                }
+
                 document.getElementById('score-home').textContent = goalsHome;
                 document.getElementById('score-away').textContent = goalsAway;
 
@@ -250,7 +255,7 @@
                     wrapper.classList.remove('visible');
                 }
 
-                // 4. LEITURA PRECISA DA SUBPASTA REAL DE PÊNALTIS
+                // 4. Leitura dos Pênaltis
                 const penData = data.penalties || {};
                 
                 const getSortedShots = (shotsObj) => {
@@ -264,11 +269,11 @@
                 const homeShots = getSortedShots(penData.home);
                 const awayShots = getSortedShots(penData.away);
 
-                // Conta quantos gols reais (valor 1) foram convertidos de cada lado
+                // Conta quantos gols reais (valor 1) foram marcados nos pênaltis
                 const penGoalsHome = homeShots.filter(status => String(status).trim() === '1').length;
                 const penGoalsAway = awayShots.filter(status => String(status).trim() === '1').length;
 
-                // CONDIÇÃO EXIGIDA: Se ambos forem 0, oculta. Se qualquer um for maior que 0, exibe!
+                // Condição inteligente solicitada por você:
                 const penBox = document.getElementById('ui-penalties-box');
                 if (penGoalsHome > 0 || penGoalsAway > 0) {
                     penBox.style.display = 'block';
@@ -278,14 +283,14 @@
                     penBox.style.display = 'none';
                 }
 
-                // 5. Determinar o Vencedor Absoluto para Destacar Visualmente
+                // 5. Determinar Vencedor para Destaque Visual
                 const blockHome = document.getElementById('block-home');
                 const blockAway = document.getElementById('block-away');
                 
                 blockHome.classList.remove('winner');
                 blockAway.classList.remove('winner');
 
-                const totalScoreHome = goalsHome + (penGoalsHome * 0.1); // Peso leve para desempate visual
+                const totalScoreHome = goalsHome + (penGoalsHome * 0.1);
                 const totalScoreAway = goalsAway + (penGoalsAway * 0.1);
 
                 if (goalsHome > goalsAway || (goalsHome === goalsAway && penGoalsHome > penGoalsAway)) {
