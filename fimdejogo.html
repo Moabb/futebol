@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>1Overlay - Fim de Jogo</title>
+    <title>Overlay - Fim de Jogo</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght=700;900&family=Space+Grotesk:wght=500;700&family=Kanit:wght=600;800&display=swap');
 
@@ -235,21 +235,20 @@
                 document.getElementById('color-home').style.backgroundColor = configHome.color1 || "#3b82f6";
                 document.getElementById('color-away').style.backgroundColor = configAway.color1 || "#ef4444";
 
-                // 2. FUNÇÃO ESPECIAL PARA LIMPAR AS TAGS SPAN DO SEU PLACAR
+                // 2. FUNÇÃO ADAPTADA PARA EXTRAIR NÚMEROS DO SEU CAMINHO DO PAINEL (data.timer.gols)
                 const extraiNumeroLimpo = (valorBruto) => {
                     if (valorBruto === undefined || valorBruto === null) return 0;
-                    // Remove qualquer tag HTML (como <span> e </span>) e pega só os dígitos
                     const textoLimpo = String(valorBruto).replace(/<[^>]*>/g, '').replace(/[^0-9]/g, '');
                     return parseInt(textoLimpo) || 0;
                 };
 
-                // Coleta usando os caminhos corretos vistos na sua imagem
                 let goalsHome = 0;
                 let goalsAway = 0;
 
-                if (data.score) {
-                    goalsHome = extraiNumeroLimpo(data.score.home);
-                    goalsAway = extraiNumeroLimpo(data.score.away);
+                // Lê os dados do tempo normal a partir de data.timer conforme estruturado no seu painel
+                if (data.timer) {
+                    goalsHome = extraiNumeroLimpo(data.timer.golsHome);
+                    goalsAway = extraiNumeroLimpo(data.timer.golsAway);
                 }
 
                 document.getElementById('score-home').textContent = goalsHome;
