@@ -251,12 +251,14 @@
                 </div>
             </div>
             <div class="list-scroll" id="ui-players-list">
-                </div>
+                <!-- Preenchido via JS -->
+            </div>
         </div>
 
         <div class="field-container">
             <div class="tactical-field" id="ui-tactical-field">
-                </div>
+                <!-- Preenchido via JS dinamicamente -->
+            </div>
         </div>
     </div>
 
@@ -287,25 +289,75 @@
                 const data = matchSnapshot.val();
                 if (!data) return;
 
-                const targetSide = data.overlays?.lineupSide || 'home';
-                const teamConfig = data.config?.[targetSide] || {};
-                const teamPlayers = data.players?.[targetSide] || [];
+                // Restaura o mapeamento exato de botões e visibilidade que você usava na versão boa
+                let isVisible = false;
+                let targetSide = 'home';
 
-                const c1 = teamConfig.color1 || '#3b82f6';
-                const c2 = teamConfig.color2 || '#ffffff';
-                
-                document.getElementById('ui-team-name').textContent = teamConfig.name || (targetSide === 'home' ? "CASA" : "VISITANTE");
-                document.getElementById('ui-color-bar').style.backgroundColor = c1;
+                if (data.overlays) {
+                    if (data.overlays.lineupHome === true) {
+                        isVisible = true;
+                        targetSide = 'home';
+                    } else if (data.overlays.lineupAway === true) {
+                        isVisible = true;
+                        targetSide = 'away';
+                    }
+                }
 
                 const wrapper = document.getElementById('lineup-wrapper');
-                if (data.overlays?.lineup === true) {
+                if (isVisible) {
                     wrapper.classList.add('visible');
                 } else {
                     wrapper.classList.remove('visible');
                 }
 
-                renderTextList(teamPlayers);
-                renderTacticalField(teamPlayers, c1, c2, teamConfig.formation);
+                if (!data.config || !data.config[targetSide]) return;
+                const teamConfig = data.config[targetSide];
+
+                // Atualiza cores e textos principais
+                const c1 = teamConfig.color1 || '#3b82f6';
+                const c2 = teamConfig.color2 || '#ffffff';
+                
+                document.getElementById('ui-team-name').textContent = teamConfig.name || "TIME";
+                document.getElementById('ui-color-bar').style.backgroundColor = c1;
+
+                // Processador Original Inteligente da String de Jogadores separados por hifen (-)
+                let lineUpPlayers = [];
+                const rawPlayersString = teamConfig.players || "";
+
+                if (rawPlayersString && typeof rawPlayersString === 'string') {
+                    const regex = /(\d+)\s*-\s*([^0-9\-]+)/g;
+                    let match;
+                    
+                    while ((match = regex.exec(rawPlayersString)) !== null) {
+                        const num = match[1].trim();
+                        const name = match[2].replace(/\s+-\s*$/, '').trim();
+                        
+                        if (name) {
+                            lineUpPlayers.push({
+                                number: num,
+                                name: name
+                            });
+                        }
+                    }
+                }
+
+                // Fallback de contingência
+                if (lineUpPlayers.length === 0 && rawPlayersString) {
+                    const parts = rawPlayersString.split('-');
+                    parts.forEach((part, index) => {
+                        const clean = part.trim();
+                        if (clean) {
+                            lineUpPlayers.push({
+                                number: index + 1,
+                                name: clean
+                            });
+                        }
+                    });
+                }
+
+                // Renderização das duas frentes de tela com os dados convertidos
+                renderTextList(lineUpPlayers);
+                renderTacticalField(lineUpPlayers, c1, c2, teamConfig.tactic || teamConfig.formation);
             });
         });
 
@@ -313,9 +365,7 @@
             const container = document.getElementById('ui-players-list');
             container.innerHTML = '';
 
-            const validPlayers = players.filter(p => p && p.name && p.name.trim() !== '');
-
-            validPlayers.forEach(p => {
+            players.forEach(p => {
                 const row = document.createElement('div');
                 row.className = 'player-row';
                 row.innerHTML = `
@@ -330,11 +380,11 @@
             const field = document.getElementById('ui-tactical-field');
             field.innerHTML = '';
 
-            const validPlayers = players.filter(p => p && p.name && p.name.trim() !== '');
-            if (validPlayers.length === 0) return;
+            if (players.length === 0) return;
 
-            const gk = validPlayers[0];
-            const outfieldPlayers = validPlayers.slice(1);
+            // Primeiro jogador é o goleiro
+            const gk = players[0];
+            const outfieldPlayers = players.slice(1);
 
             const gkLine = document.createElement('div');
             gkLine.className = 'field-line';
@@ -346,6 +396,7 @@
             `;
             field.appendChild(gkLine);
 
+            // Esquema tático dinâmico (Ex: "4-4-2")
             const formatString = formation || "4-4-2";
             const lineCounts = formatString.split('-').map(num => parseInt(num) || 2);
 
