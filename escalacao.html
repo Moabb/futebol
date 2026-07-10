@@ -7,7 +7,7 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght=700;900&family=Space+Grotesk:wght=500;700&family=Kanit:wght=600;800&display=swap');
 
-        /* Configuração de transparência absoluta para o OBS Studio em 1920x1080 */
+        /* Configuração de transparência absoluta para o OBS Studio em Full HD */
         html, body {
             margin: 0;
             padding: 0;
@@ -17,39 +17,28 @@
             color: #ffffff;
             width: 1920px;
             height: 1080px;
-            box-sizing: border-box;
         }
 
-        /* Wrapper principal recalibrado e centralizado para Full HD */
+        /* Posicionamento absoluto original, calibrado proporcionalmente para 1920x1080 */
         #lineup-wrapper {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 1920px;
-            height: 1080px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 80px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.95);
+            width: 1700px;
+            height: 900px;
+            display: grid;
+            grid-template-columns: 460px 1fr;
+            gap: 50px;
+            padding: 40px;
             box-sizing: border-box;
-            opacity: 0; 
-            transform: scale(0.95);
+            opacity: 0;
             transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s ease;
         }
 
         #lineup-wrapper.visible {
             opacity: 1;
-            transform: scale(1);
-        }
-
-        /* Grid interno ajustado para uma proporção imponente em 1080p */
-        .lineup-grid {
-            display: grid;
-            grid-template-columns: 460px 1fr;
-            gap: 60px;
-            width: 1600px;
-            height: 850px;
-            box-sizing: border-box;
+            transform: translate(-50%, -50%) scale(1);
         }
 
         /* Container da Lista de Jogadores */
@@ -130,7 +119,6 @@
             margin-bottom: 10px;
             border-radius: 8px;
             border: 1px solid rgba(255,255,255,0.05);
-            transition: all 0.3s ease;
         }
 
         .player-number {
@@ -254,25 +242,21 @@
 <body>
 
     <div id="lineup-wrapper">
-        <div class="lineup-grid">
-            
-            <div class="players-list-container">
-                <div class="team-header">
-                    <div class="team-color-bar" id="ui-color-bar"></div>
-                    <div class="team-title-box">
-                        <span class="badge-sub">ESCALAÇÃO</span>
-                        <div class="team-name-display" id="ui-team-name">NOME DO TIME</div>
-                    </div>
+        <div class="players-list-container">
+            <div class="team-header">
+                <div class="team-color-bar" id="ui-color-bar"></div>
+                <div class="team-title-box">
+                    <span class="badge-sub">ESCALAÇÃO</span>
+                    <div class="team-name-display" id="ui-team-name">NOME DO TIME</div>
                 </div>
-                <div class="list-scroll" id="ui-players-list">
-                    </div>
             </div>
+            <div class="list-scroll" id="ui-players-list">
+                </div>
+        </div>
 
-            <div class="field-container">
-                <div class="tactical-field" id="ui-tactical-field">
-                    </div>
-            </div>
-
+        <div class="field-container">
+            <div class="tactical-field" id="ui-tactical-field">
+                </div>
         </div>
     </div>
 
@@ -303,19 +287,16 @@
                 const data = matchSnapshot.val();
                 if (!data) return;
 
-                // Identifica qual lado deve ser exibido (home ou away)
                 const targetSide = data.overlays?.lineupSide || 'home';
                 const teamConfig = data.config?.[targetSide] || {};
                 const teamPlayers = data.players?.[targetSide] || [];
 
-                // Atualiza cores e textos principais
                 const c1 = teamConfig.color1 || '#3b82f6';
                 const c2 = teamConfig.color2 || '#ffffff';
                 
                 document.getElementById('ui-team-name').textContent = teamConfig.name || (targetSide === 'home' ? "CASA" : "VISITANTE");
                 document.getElementById('ui-color-bar').style.backgroundColor = c1;
 
-                // Controla o Fade In / Out da tela inteira
                 const wrapper = document.getElementById('lineup-wrapper');
                 if (data.overlays?.lineup === true) {
                     wrapper.classList.add('visible');
@@ -323,7 +304,6 @@
                     wrapper.classList.remove('visible');
                 }
 
-                // Renderização das duas frentes de tela
                 renderTextList(teamPlayers);
                 renderTacticalField(teamPlayers, c1, c2, teamConfig.formation);
             });
@@ -333,7 +313,6 @@
             const container = document.getElementById('ui-players-list');
             container.innerHTML = '';
 
-            // Filtra e ordena apenas quem tem nome válido
             const validPlayers = players.filter(p => p && p.name && p.name.trim() !== '');
 
             validPlayers.forEach(p => {
@@ -354,11 +333,9 @@
             const validPlayers = players.filter(p => p && p.name && p.name.trim() !== '');
             if (validPlayers.length === 0) return;
 
-            // O primeiro jogador da lista é sempre considerado o Goleiro (GK)
             const gk = validPlayers[0];
             const outfieldPlayers = validPlayers.slice(1);
 
-            // Posiciona a linha do Goleiro na base do campo
             const gkLine = document.createElement('div');
             gkLine.className = 'field-line';
             gkLine.innerHTML = `
@@ -369,7 +346,6 @@
             `;
             field.appendChild(gkLine);
 
-            // Processamento inteligente do esquema tático (Ex: "4-4-2", "4-3-3")
             const formatString = formation || "4-4-2";
             const lineCounts = formatString.split('-').map(num => parseInt(num) || 2);
 
@@ -407,7 +383,6 @@
                 line.appendChild(pEl);
             });
 
-            // Insere antes do topo para empurrar o ataque para cima e manter a defesa abaixo
             fieldContainer.insertBefore(line, fieldContainer.firstChild);
         }
     </script>
