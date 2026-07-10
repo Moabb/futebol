@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Overlay - Fim de Jogo</title>
+    <title>1Overlay - Fim de Jogo</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght=700;900&family=Space+Grotesk:wght=500;700&family=Kanit:wght=600;800&display=swap');
 
@@ -36,101 +36,119 @@
             transform: translate(-50%, -50%);
         }
 
-        .main-container {
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 27, 75, 0.98) 100%);
-            border: 3px solid #f59e0b;
-            border-radius: 24px;
-            padding: 40px;
-            box-shadow: 0 40px 80px rgba(0,0,0,0.8);
-            position: relative;
-        }
-
-        .header-badge {
-            display: inline-block;
-            background: #f59e0b;
-            color: #000000;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 16px;
+        /* --- TÍTULO DO EVENTO --- */
+        .status-badge {
+            font-size: 14px;
             font-weight: 900;
-            padding: 6px 24px;
-            border-radius: 20px;
-            text-transform: uppercase;
             letter-spacing: 4px;
-            margin-bottom: 35px;
-            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+            text-transform: uppercase;
+            color: var(--theme-accent);
+            margin-bottom: 30px;
         }
 
-        /* Grid de Placar Principal */
-        .scoreboard-grid {
-            display: grid;
-            grid-template-columns: 1fr 180px 1fr;
+        /* --- PAINEL PRINCIPAL DO CONFRONTO --- */
+        .match-result-flex {
+            display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 20px;
+            margin: 20px 0;
         }
 
         .team-block {
+            flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 20px;
-            border-radius: 16px;
-            background: rgba(255,255,255,0.02);
-            border: 1px solid rgba(255,255,255,0.05);
-            transition: all 0.5s ease;
+            gap: 15px;
+            transition: all 0.4s ease;
         }
 
+        /* Destaque para o time que venceu a partida */
         .team-block.winner {
-            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(255,255,255,0.02) 100%);
-            border-color: rgba(245, 158, 11, 0.4);
-            box-shadow: 0 0 30px rgba(245, 158, 11, 0.15);
+            transform: scale(1.05);
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
         }
 
-        .team-color-indicator {
-            width: 45px;
-            height: 8px;
-            border-radius: 4px;
-            margin-bottom: 15px;
+        .team-color-bar {
+            width: 60px;
+            height: 6px;
+            border-radius: 3px;
+            border: 1px solid rgba(255,255,255,0.2);
         }
 
         .team-name {
-            font-family: 'Kanit', sans-serif;
-            font-size: 32px;
+            font-size: 36px;
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 1px;
-            max-width: 280px;
+            max-width: 320px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
 
-        .score-display {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 84px;
-            font-weight: 900;
-            line-height: 1;
-            margin-top: 15px;
-            text-shadow: 0 4px 8px rgba(0,0,0,0.5);
-        }
-
-        .center-vs {
-            font-family: 'Kanit', sans-serif;
-            font-size: 26px;
+        .winner-lbl {
+            font-size: 11px;
             font-weight: 800;
-            color: rgba(255,255,255,0.3);
-            text-transform: uppercase;
             letter-spacing: 2px;
+            background: #10b981;
+            color: #ffffff;
+            padding: 3px 10px;
+            border-radius: 20px;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .team-block.winner .winner-lbl {
+            opacity: 1;
+            transform: translateY(0);
         }
 
-        /* Caixa de Resultados de Pênaltis */
-        .penalties-box {
-            margin-top: 35px;
-            padding: 15px 40px;
-            background: rgba(0, 0, 0, 0.4);
+        /* --- PLACAR CENTRAL --- */
+        .score-center {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 25px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 64px;
+            font-weight: 900;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 10px 40px;
             border-radius: 12px;
-            border: 1px dashed rgba(245, 158, 11, 0.3);
-            display: none;
-            animation: fadeIn 0.5s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            min-width: 200px;
+        }
+
+        .score-divider {
+            font-size: 32px;
+            opacity: 0.3;
+            font-weight: 400;
+        }
+
+        /* --- BLOCO SECUNDÁRIO DE PÊNALTIS --- */
+        .penalties-result-box {
+            margin-top: 35px;
+            padding-top: 25px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: none; /* Controlado dinamicamente via JS se houver decisão por pênaltis */
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        .penalties-title {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            opacity: 0.6;
+            margin-bottom: 8px;
+        }
+
+        .penalties-score {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--theme-accent);
         }
 
         @keyframes fadeIn {
@@ -138,65 +156,66 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .penalties-title {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 13px;
-            font-weight: 700;
-            color: #f59e0b;
-            letter-spacing: 3px;
-            text-transform: uppercase;
-            margin-bottom: 8px;
+        /* ======================================================= */
+        /* INTEGRAÇÃO COMPLETA COM OS TEMAS DO PAINEL               */
+        /* ======================================================= */
+        
+        /* ESTILO 1: CYBER NEO */
+        .theme-cyber {
+            background: var(--theme-primary);
+            border: 2px solid var(--theme-accent);
+            border-radius: 16px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6);
         }
 
-        .penalties-score-row {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 25px;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 28px;
-            font-weight: 900;
-            color: #ffffff;
-        }
+        /* ESTILO 2: ASYMMETRIC EDGE */
+        .theme-minimal { transform: skewX(-8px) translate(-50%, -60%); }
+        .theme-minimal.visible { transform: skewX(-8px) translate(-50%, -50%); }
+        .theme-minimal { background: var(--theme-primary); border-left: 8px solid var(--theme-accent); box-shadow: 10px 10px 0px rgba(0,0,0,0.3); }
+        .theme-minimal .score-center { transform: skewX(8px); }
+        .theme-minimal span, .theme-minimal div:not(.score-center) { transform: skewX(8px); }
 
-        .pen-label {
-            font-size: 14px;
-            color: rgba(255,255,255,0.4);
-            font-weight: 500;
-        }
+        /* ESTILO 3: NEO-CLASSIC TV */
+        .theme-monolith { font-family: 'Kanit', sans-serif; background: rgba(15, 23, 42, 0.95); border-radius: 6px; box-shadow: 0 15px 35px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); }
+        .theme-monolith .score-center { background: transparent; border: none; font-size: 72px; padding: 0; }
+        .theme-monolith .penalties-result-box { border-color: var(--theme-accent); }
     </style>
 </head>
 <body>
 
-    <div id="endgame-wrapper">
-        <div class="main-container">
-            <div class="header-badge">Fim de Jogo</div>
+    <div id="endgame-wrapper" class="theme-cyber">
+        
+        <div class="status-badge">Fim de Partida</div>
+
+        <div class="match-result-flex">
             
-            <div class="scoreboard-grid">
-                <div class="team-block" id="block-home">
-                    <div class="team-color-indicator" id="color-home"></div>
-                    <div class="team-name" id="name-home">CASA</div>
-                    <div class="score-display" id="score-home">0</div>
-                </div>
-
-                <div class="center-vs">FIM</div>
-
-                <div class="team-block" id="block-away">
-                    <div class="team-color-indicator" id="color-away"></div>
-                    <div class="team-name" id="name-away">VISITANTE</div>
-                    <div class="score-display" id="score-away">0</div>
-                </div>
+            <div class="team-block" id="block-home">
+                <div class="team-color-bar" id="color-home"></div>
+                <div class="team-name" id="txt-home-name">CASA</div>
+                <div class="winner-lbl">VENCEDOR</div>
             </div>
 
-            <div class="penalties-box" id="ui-penalties-box">
-                <div class="penalties-title">Decisão por Pênaltis</div>
-                <div class="penalties-score-row">
-                    <span id="pen-score-home">0</span>
-                    <span class="pen-label">X</span>
-                    <span id="pen-score-away">0</span>
-                </div>
+            <div class="score-center">
+                <span id="score-home">0</span>
+                <span class="score-divider">x</span>
+                <span id="score-away">0</span>
+            </div>
+
+            <div class="team-block" id="block-away">
+                <div class="team-color-bar" id="color-away"></div>
+                <div class="team-name" id="txt-away-name">VISITANTE</div>
+                <div class="winner-lbl">VENCEDOR</div>
+            </div>
+
+        </div>
+
+        <div class="penalties-result-box" id="ui-penalties-box">
+            <div class="penalties-title">Decisão nos Pênaltis</div>
+            <div class="penalties-score">
+                (<span id="pen-score-home">0</span>) &nbsp;vs&nbsp; (<span id="pen-score-away">0</span>)
             </div>
         </div>
+
     </div>
 
     <script type="module">
@@ -220,49 +239,45 @@
 
         onValue(activeMatchRef, (snapshot) => {
             const activeId = snapshot.val() || "jogo_padrao";
+            console.log("Tela final sincronizada na partida ativa:", activeId);
+
             const matchRef = ref(db, 'matches/' + activeId);
 
             onValue(matchRef, (matchSnapshot) => {
                 const data = matchSnapshot.val();
                 if (!data) return;
 
-                // 1. Configurações básicas de Nomes e Cores
-                const configHome = data.config?.home || {};
-                const configAway = data.config?.away || {};
+                // 1. Controle de Visibilidade Baseado no Painel
+                const wrapper = document.getElementById('endgame-wrapper');
+                const isVisible = data.overlays && data.overlays.endgame;
 
-                document.getElementById('name-home').textContent = configHome.name || "CASA";
-                document.getElementById('name-away').textContent = configAway.name || "VISITANTE";
-                document.getElementById('color-home').style.backgroundColor = configHome.color1 || "#3b82f6";
-                document.getElementById('color-away').style.backgroundColor = configAway.color1 || "#ef4444";
-
-                // 2. FUNÇÃO ADAPTADA PARA EXTRAIR NÚMEROS DO SEU CAMINHO DO PAINEL (data.timer.gols)
-                const extraiNumeroLimpo = (valorBruto) => {
-                    if (valorBruto === undefined || valorBruto === null) return 0;
-                    const textoLimpo = String(valorBruto).replace(/<[^>]*>/g, '').replace(/[^0-9]/g, '');
-                    return parseInt(textoLimpo) || 0;
-                };
-
-                let goalsHome = 0;
-                let goalsAway = 0;
-
-                // Lê os dados do tempo normal a partir de data.timer conforme estruturado no seu painel
-                if (data.timer) {
-                    goalsHome = extraiNumeroLimpo(data.timer.golsHome);
-                    goalsAway = extraiNumeroLimpo(data.timer.golsAway);
+                if (!isVisible) {
+                    wrapper.classList.remove('visible');
+                    return;
                 }
 
+                // 2. Injetar Design e Cores Escolhidas do Painel
+                const design = data.config.design || { style: "cyber", primary: "#1e1b4b", secondary: "#0f172a", accent: "#f59e0b" };
+                document.documentElement.style.setProperty('--theme-primary', design.primary);
+                document.documentElement.style.setProperty('--theme-secondary', design.secondary);
+                document.documentElement.style.setProperty('--theme-accent', design.accent);
+
+                wrapper.className = 'visible';
+                wrapper.classList.add(`theme-${design.style}`);
+
+                // Nomes e barras de cores estruturais
+                document.getElementById('txt-home-name').textContent = data.config.home.name;
+                document.getElementById('txt-away-name').textContent = data.config.away.name;
+                document.getElementById('color-home').style.backgroundColor = data.config.home.color1 || "#3b82f6";
+                document.getElementById('color-away').style.backgroundColor = data.config.away.color1 || "#ef4444";
+
+                // 3. APLICAR GOLS DO TEMPO NORMAL (Caminho perfeito do fimdejogo (1).html)
+                const goalsHome = data.stats?.home?.goals || 0;
+                const goalsAway = data.stats?.away?.goals || 0;
                 document.getElementById('score-home').textContent = goalsHome;
                 document.getElementById('score-away').textContent = goalsAway;
 
-                // 3. Controle Geral de Exibição da Tela Cheia
-                const wrapper = document.getElementById('endgame-wrapper');
-                if (data.overlays?.endgame === true) {
-                    wrapper.classList.add('visible');
-                } else {
-                    wrapper.classList.remove('visible');
-                }
-
-                // 4. Leitura dos Pênaltis
+                // 4. VERIFICAR ESTRUTURA DE PÊNALTIS COM CONTAGEM DE VALORES '1' (Do fimdejogo.html)
                 const penData = data.penalties || {};
                 
                 const getSortedShots = (shotsObj) => {
@@ -276,11 +291,11 @@
                 const homeShots = getSortedShots(penData.home);
                 const awayShots = getSortedShots(penData.away);
 
-                // Conta quantos gols reais (valor 1) foram marcados nos pênaltis
+                // Conta quantos gols reais (valor 1) foram marcados de fato nas cobranças
                 const penGoalsHome = homeShots.filter(status => String(status).trim() === '1').length;
                 const penGoalsAway = awayShots.filter(status => String(status).trim() === '1').length;
 
-                // Condição condicional solicitada por você
+                // Regra Condicional: Se qualquer um marcou gol nos pênaltis, exibe a caixa. Caso contrário, oculta.
                 const penBox = document.getElementById('ui-penalties-box');
                 if (penGoalsHome > 0 || penGoalsAway > 0) {
                     penBox.style.display = 'block';
@@ -290,7 +305,7 @@
                     penBox.style.display = 'none';
                 }
 
-                // 5. Determinar Vencedor para Destaque Visual
+                // 5. Determinar Quem é o Grande Vencedor da Partida para Destacar na Tela
                 const blockHome = document.getElementById('block-home');
                 const blockAway = document.getElementById('block-away');
                 
