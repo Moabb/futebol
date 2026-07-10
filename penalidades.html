@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>1Overlay - Disputa de Pênaltis</title>
+    <title>Overlay - Disputa de Pênaltis</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght=700;900&family=Space+Grotesk:wght=500;700&family=Kanit:wght=600;800&display=swap');
 
@@ -144,18 +144,33 @@
         }
 
         @keyframes pulse-active {
-            0% {
-                box-shadow: 0 0 4px rgba(245, 158, 11, 0.2);
-                background: rgba(245, 158, 11, 0.1);
-            }
-            100% {
-                box-shadow: 0 0 16px rgba(245, 158, 11, 0.6);
-                background: rgba(245, 158, 11, 0.35);
-            }
+            0% { box-shadow: 0 0 4px rgba(245, 158, 11, 0.2); background: rgba(245, 158, 11, 0.1); }
+            100% { box-shadow: 0 0 16px rgba(245, 158, 11, 0.6); background: rgba(245, 158, 11, 0.35); }
+        }
+
+        /* CAIXA DE DEBUG EM TELA */
+        #debug-box {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            width: 400px;
+            max-height: 200px;
+            background: rgba(0, 0, 0, 0.95);
+            color: #10b981;
+            font-family: monospace;
+            font-size: 11px;
+            padding: 10px;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            overflow-y: auto;
+            z-index: 99999;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
         }
     </style>
 </head>
 <body>
+
+    <div id="debug-box">Aguardando conexão com o Firebase...</div>
 
     <div id="penalties-wrapper">
         <div class="penalties-container">
@@ -197,6 +212,7 @@
         const db = getDatabase(app);
 
         const activeMatchRef = ref(db, 'activeMatchId');
+        const debugBox = document.getElementById('debug-box');
 
         onValue(activeMatchRef, (snapshot) => {
             const activeId = snapshot.val() || "jogo_padrao";
@@ -204,19 +220,20 @@
 
             onValue(matchRef, (matchSnapshot) => {
                 const data = matchSnapshot.val();
-                if (!data) return;
+                if (!data) {
+                    debugBox.innerHTML = `⚠️ Jogo ativo "${activeId}" não encontrado no banco.`;
+                    return;
+                }
 
-                // Nomes e cores do painel
+                // Dados Gerais
                 const configHome = data.config?.home || {};
                 const configAway = data.config?.away || {};
 
                 document.getElementById('team-name-home').textContent = configHome.name || "CASA";
                 document.getElementById('team-name-away').textContent = configAway.name || "VISITANTE";
-
                 document.getElementById('color-home').style.backgroundColor = configHome.color1 || "#3b82f6";
                 document.getElementById('color-away').style.backgroundColor = configAway.color1 || "#ef4444";
 
-                // Controle de exibição da tela
                 const wrapper = document.getElementById('penalties-wrapper');
                 if (data.overlays?.penalties === true) {
                     wrapper.classList.add('visible');
@@ -226,12 +243,16 @@
 
                 const penData = data.penalties || {};
 
-                // SOLUÇÃO DO MAP: Converte OBJETOS indexados em Arrays reais de forma 100% garantida
+                // PRINT DE MONITORAMENTO EM TEMPO REAL NA TELA
+                debugBox.innerHTML = `<strong>CONECTADO! ID:</strong> ${activeId}<br>` +
+                                     `<strong>shotsHome recebido:</strong> ${JSON.stringify(penData.shotsHome)}<br>` +
+                                     `<strong>shotsAway recebido:</strong> ${JSON.stringify(penData.shotsAway)}<br>` +
+                                     `<strong>currentTeam/Shot:</strong> ${penData.currentTeam} / ${penData.currentShot}`;
+
+                // Conversor universal seguro que transforma qualquer Objeto ou Array em uma Lista real
                 const getSortedShots = (shotsObj) => {
                     if (!shotsObj) return [];
                     if (Array.isArray(shotsObj)) return shotsObj;
-                    
-                    // Se for um objeto, extrai os valores ordenando pelas chaves numéricas
                     return Object.keys(shotsObj)
                         .sort((a, b) => parseInt(a) - parseInt(b))
                         .map(key => shotsObj[key]);
@@ -240,7 +261,6 @@
                 const finalHomeArray = getSortedShots(penData.shotsHome);
                 const finalAwayArray = getSortedShots(penData.shotsAway);
 
-                // Lendo batedor atual e lado
                 const activeIndex = (penData.currentShot !== undefined) ? parseInt(penData.currentShot) : -1;
                 const currentTeam = penData.currentTeam || '';
 
@@ -253,13 +273,11 @@
             const trackContainer = document.getElementById(`track-${side}`);
             trackContainer.innerHTML = '';
 
-            // Agora garantido que shotsArray é um array real antes de fazer o map
             const cleanShots = (shotsArray || []).map(item => {
                 if (item === null || item === undefined) return '0';
                 return String(item).trim();
             });
 
-            // Determina a quantidade de slots (mínimo 5)
             const totalSlots = Math.max(5, cleanShots.length);
 
             for (let i = 0; i < totalSlots; i++) {
@@ -267,7 +285,6 @@
                 slot.className = 'ball-slot';
                 slot.textContent = i + 1;
 
-                // Verificação numérica ('1' = gol, '2' = erro)
                 if (cleanShots[i] === '1') {
                     slot.className = 'ball-slot success';
                     slot.innerHTML = '✓';
@@ -275,7 +292,7 @@
                     slot.className = 'ball-slot miss';
                     slot.innerHTML = '✕';
                 } else if (i === activeIndex) {
-                    slot.className = 'ball-slot next'; // Batedor da vez piscando
+                    slot.className = 'ball-slot next';
                 }
 
                 trackContainer.appendChild(slot);
