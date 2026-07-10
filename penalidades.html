@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>1Overlay - Disputa de Pênaltis</title>
+    <title>Overlay - Disputa de Pênaltis</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght=700;900&family=Space+Grotesk:wght=500;700&family=Kanit:wght=600;800&display=swap');
 
@@ -113,7 +113,7 @@
             box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
         }
 
-        /* GOL (Valor 1) */
+        /* GOL (Valor 1 no seu Banco) */
         .ball-slot.success {
             background: radial-gradient(circle at 35% 35%, #10b981 0%, #047857 100%) !important;
             border-color: #34d399 !important;
@@ -124,7 +124,7 @@
             transform: scale(1.05);
         }
 
-        /* ERROU (Valor 2) */
+        /* ERROU (Valor 2 no seu Banco) */
         .ball-slot.miss {
             background: radial-gradient(circle at 35% 35%, #ef4444 0%, #b91c1c 100%) !important;
             border-color: #f87171 !important;
@@ -135,7 +135,7 @@
             transform: scale(1.05);
         }
 
-        /* PRÓXIMO BATEDOR */
+        /* PRÓXIMO BATEDOR ATIVO (Aguardando = 0) */
         .ball-slot.next {
             background: rgba(245, 158, 11, 0.15) !important;
             border-color: #f59e0b !important;
@@ -148,27 +148,24 @@
             100% { box-shadow: 0 0 16px rgba(245, 158, 11, 0.6); background: rgba(245, 158, 11, 0.35); }
         }
 
+        /* Monitor discreto de sucesso no rodapé */
         #debug-box {
             position: fixed;
             bottom: 10px;
             left: 10px;
-            width: 500px;
-            max-height: 250px;
-            background: rgba(0, 0, 0, 0.95);
-            color: #10b981;
+            background: rgba(0, 0, 0, 0.85);
+            color: #34d399;
             font-family: monospace;
             font-size: 11px;
-            padding: 10px;
-            border: 1px solid #334155;
-            border-radius: 6px;
-            overflow-y: auto;
+            padding: 6px 12px;
+            border-radius: 4px;
             z-index: 99999;
         }
     </style>
 </head>
 <body>
 
-    <div id="debug-box">Conectando...</div>
+    <div id="debug-box">Sincronizado com a estrutura real do Firebase!</div>
 
     <div id="penalties-wrapper">
         <div class="penalties-container">
@@ -210,7 +207,6 @@
         const db = getDatabase(app);
 
         const activeMatchRef = ref(db, 'activeMatchId');
-        const debugBox = document.getElementById('debug-box');
 
         onValue(activeMatchRef, (snapshot) => {
             const activeId = snapshot.val() || "jogo_padrao";
@@ -220,7 +216,7 @@
                 const data = matchSnapshot.val();
                 if (!data) return;
 
-                // Nomes e cores do painel
+                // Nomes e cores vindos das configurações reais
                 const configHome = data.config?.home || {};
                 const configAway = data.config?.away || {};
                 document.getElementById('team-name-home').textContent = configHome.name || "CASA";
@@ -228,33 +224,19 @@
                 document.getElementById('color-home').style.backgroundColor = configHome.color1 || "#3b82f6";
                 document.getElementById('color-away').style.backgroundColor = configAway.color1 || "#ef4444";
 
-                // Sempre deixa visível para fins de teste e acerto das bolinhas
-                document.getElementById('penalties-wrapper').classList.add('visible');
-
-                // VARREDURA DETECTORA: Busca os pênaltis onde quer que eles estejam salvos
-                let penData = data.penalties || data || {};
-                
-                let sHome = penData.shotsHome;
-                let sAway = penData.shotsAway;
-                let cTeam = penData.currentTeam;
-                let cShot = penData.currentShot;
-
-                // SISTEMA AUTO-REPARADOR DE SEGURANÇA: Se o banco estiver totalmente vazio, preenche dados simulados na tela
-                let usandoSimulacao = false;
-                if (sHome === undefined && sAway === undefined) {
-                    usandoSimulacao = true;
-                    sHome = [1, 2, 1]; // Simula: Gol, Erro, Gol
-                    sAway = [1, 1, 2]; // Simula: Gol, Gol, Erro
-                    cTeam = "home";
-                    cShot = 3;
+                // Controle de visibilidade oficial pelo painel
+                const wrapper = document.getElementById('penalties-wrapper');
+                if (data.overlays?.penalties === true) {
+                    wrapper.classList.add('visible');
+                } else {
+                    wrapper.classList.remove('visible');
                 }
 
-                // Atualiza o painel de diagnóstico
-                debugBox.innerHTML = `<strong>ID ATIVO:</strong> ${activeId}<br>` +
-                                     `<strong>Status do Banco:</strong> ${usandoSimulacao ? '⚠️ Vazio (Usando Simulação)' : '✅ Dados Encontrados!'}<br>` +
-                                     `<strong>shotsHome bruto:</strong> ${JSON.stringify(penData.shotsHome)}<br>` +
-                                     `<strong>Todo o Nó de Pênaltis:</strong> ${JSON.stringify(penData)}`;
+                // MAPEAMENTO DIRETAMENTE APONTADO PARA A ESTRUTURA REAL DO BANCO
+                const rawHomeShots = data.home || [];
+                const rawAwayShots = data.away || [];
 
+                // Função limpa e robusta de conversão ordenada
                 const getSortedShots = (shotsObj) => {
                     if (!shotsObj) return [];
                     if (Array.isArray(shotsObj)) return shotsObj;
@@ -263,39 +245,48 @@
                         .map(key => shotsObj[key]);
                 };
 
-                const finalHomeArray = getSortedShots(sHome);
-                const finalAwayArray = getSortedShots(sAway);
-                const activeIndex = (cShot !== undefined) ? parseInt(cShot) : -1;
+                const finalHomeArray = getSortedShots(rawHomeShots);
+                const finalAwayArray = getSortedShots(rawAwayShots);
 
-                renderTrack('home', finalHomeArray, cTeam === 'home' ? activeIndex : -1);
-                renderTrack('away', finalAwayArray, cTeam === 'away' ? activeIndex : -1);
+                // Renderiza as duas esteiras na tela usando os dados reais do banco
+                renderTrack('home', finalHomeArray);
+                renderTrack('away', finalAwayArray);
             });
         });
 
-        function renderTrack(side, shotsArray, activeIndex) {
+        function renderTrack(side, shotsArray) {
             const trackContainer = document.getElementById(`track-${side}`);
             trackContainer.innerHTML = '';
 
+            // Limpa e transforma em String pura para comparação segura ('1' ou '2')
             const cleanShots = (shotsArray || []).map(item => {
                 if (item === null || item === undefined) return '0';
                 return String(item).trim();
             });
 
+            // Mantém o layout dinâmico e o padrão mínimo visual de 5 bolinhas na tela
             const totalSlots = Math.max(5, cleanShots.length);
+
+            // Variável de controle para destacar apenas a PRIMEIRA bolinha que estiver aguardando ('0')
+            let jaDestacouProximo = false;
 
             for (let i = 0; i < totalSlots; i++) {
                 const slot = document.createElement('div');
                 slot.className = 'ball-slot';
                 slot.textContent = i + 1;
 
-                if (cleanShots[i] === '1') {
+                const statusAtual = cleanShots[i] || '0';
+
+                if (statusAtual === '1') {
                     slot.className = 'ball-slot success';
                     slot.innerHTML = '✓';
-                } else if (cleanShots[i] === '2') {
+                } else if (statusAtual === '2') {
                     slot.className = 'ball-slot miss';
                     slot.innerHTML = '✕';
-                } else if (i === activeIndex) {
+                } else if (statusAtual === '0' && !jaDestacouProximo) {
+                    // Pega a primeira cobrança disponível e faz ela piscar em amarelo
                     slot.className = 'ball-slot next';
+                    jaDestacouProximo = true;
                 }
 
                 trackContainer.appendChild(slot);
