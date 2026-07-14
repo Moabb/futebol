@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Overlay - Placar Dinâmico</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Space+Grotesk:wght@500;700&family=Kanit:wght@600;800&display=swap');
+
+        /* Configuração de transparência absoluta para o OBS Studio */
+        html, body {
+            margin: 0;
+            padding: 0;
+            background: transparent !important;
+            overflow: hidden;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        #scoreboard-wrapper {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            display: flex;
+            align-items: center;
+            opacity: 0; /* Começa oculto e obedece o painel */
+            transform: translateY(-20px);
+            transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* Classe de ativação controlada pelo Firebase */
+        #scoreboard-wrapper.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Container de cores duplas dos times */
+        .color-badge-container {
+            visibility: hidden;
+            display: flex;
+            flex-direction: row;
+            gap: 2px;
+            width: 18px;
+            height: 40px;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .color-stripe {
+            flex: 1;
+            height: 100%;
+        }
+
+        /* POSICIONAMENTO ABSOLUTO DOS CARTÕES (Evita esticar o layout) */
+        .red-cards-container {
+            position: absolute;
+            top: -12px; /* Joga os cartões para cima da barra principal */
+            display: flex;
+            gap: 3px;
+            align-items: center;
+            z-index: 10;
+        }
+        #red-cards-home {
+            left: 20px; /* Alinhado acima do nome/badge do time da casa */
+        }
+        #red-cards-away {
+            right: 140px; /* Alinhado acima do nome/badge do time visitante */
+        }
+        
+        .red-card-icon {
+            width: 9px;
+            height: 13px;
+            background-color: #ef4444;
+            border-radius: 1px;
+            box-shadow: 0 0 6px rgba(239, 68, 68, 0.8);
+            border: 1px solid rgba(0, 0, 0, 0.3);
+            display: inline-block;
+        }
+
+        /* ESTRUTURA BLINDADA DO CRONÔMETRO + ACRESCIMO */
+        .timer-container {
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: flex-start !important;
+            justify-content: center !important;
+        }
+        
+        #extra-time {
+            font-weight: 900 !important;
+            color: #ef4444 !important;
+            margin-left: 4px !important;
+            display: none; /* Controlado rigorosamente via JS */
+            line-height: 1 !important;
+        }
+
+        /* ======================================================= */
+        /* ESTILO 1: CYBER NEO (Design Futurista & Fluid)          */
+        /* ======================================================= */
+        .theme-cyber {
+            gap: 6px;
+        }
+        .theme-cyber .main-bar {
+            background: transparent;
+            border: 0px solid var(--theme-accent);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            
+            backdrop-filter: blur(4px);
+            position: relative;
+        }
+        .theme-cyber .team-block {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            font-size: 85px;
+            color: #ffffff;
+        }
+        .theme-cyber .score {
+            width: 85px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 100px;
+            font-weight: 900;
+            color: var(--theme-accent);
+            margin: 0 15px;
+        }
+        .theme-cyber .divider {
+            color: rgba(255,255,255,0.3);
+            font-weight: 300;
+            font-size: 40px;
+        }
+        .theme-cyber .time-bar {
+            visibility: hidden;
+            background: var(--theme-secondary);
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 7px 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-width: 85px;
+        }
+
+        #timer {
+            width: 100px;
+        }
+
+        .theme-cyber #timer {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 28px;
+            color: #ffffff;
+            font-weight: 700;
+            text-align: left;
+        }
+        .theme-cyber #extra-time {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 26px !important;
+            margin-top: 4px;
+        }
+        .theme-cyber #period {
+            font-size: 15px;
+            letter-spacing: 1px;
+            color: var(--theme-accent);
+            font-weight: 700;
+        }
+
+        /* ======================================================= */
+        /* ESTILO 2: ASYMMETRIC EDGE (Cortes Diagonais Elegantes)  */
+        /* ======================================================= */
+        .theme-minimal {
+            transform: skewX(-12px);
+        }
+        .theme-minimal .main-bar {
+            background: var(--theme-primary);
+            display: flex;
+            align-items: center;
+            border-left: 5px solid var(--theme-accent);
+            box-shadow: 5px 5px 0px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        .theme-minimal .team-block {
+            padding: 10px 20px;
+            font-weight: 700;
+            font-size: 22px;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .theme-minimal .score {
+            background: var(--theme-secondary);
+            padding: 10px 18px;
+            font-size: 24px;
+            font-weight: 900;
+            color: #ffffff;
+            border-bottom: 3px solid var(--theme-accent);
+        }
+        .theme-minimal .divider { display: none; }
+        .theme-minimal .time-bar {
+            background: #ffffff;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 5px 5px 0px rgba(0,0,0,0.2);
+        }
+        .theme-minimal #timer {
+            font-size: 22px;
+            color: var(--theme-secondary);
+            font-weight: 700;
+        }
+        .theme-minimal #extra-time {
+            font-size: 14px !important;
+        }
+        .theme-minimal #period {
+            background: var(--theme-accent);
+            color: #000;
+            font-size: 10px;
+            padding: 2px 5px;
+            font-weight: 700;
+        }
+        .theme-minimal .red-card-icon {
+            transform: skewX(12px);
+        }
+        .theme-minimal span, .theme-minimal div:not(.color-badge-container):not(.red-cards-container):not(.red-card-icon) {
+            transform: skewX(12px);
+        }
+
+        /* ======================================================= */
+        /* ESTILO 3: SOLID MONOLITH (Clean & Premium Broadcast)   */
+        /* ======================================================= */
+        .theme-monolith {
+            background: rgba(15, 23, 42, 0.85);
+            border-radius: 6px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.1);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            font-family: 'Kanit', sans-serif;
+            position: relative;
+        }
+        .theme-monolith .main-bar {
+            display: flex;
+            align-items: center;
+            padding: 0 0px;
+            position: relative;
+        }
+        .theme-monolith .team-block {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 10px;
+            color: #ffffff;
+            font-size: 30px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        .theme-monolith .color-badge-container {
+            width: 18px;
+            height: 40px;
+            border-radius: 2px;
+        }
+        .theme-monolith .score {
+            width: 30px;
+            font-size: 40px;
+            font-weight: 800;
+            color: #ffffff;
+            padding: 0 5px 3px 0px;
+            min-width: 35px;
+            text-align: center;
+        }
+        .theme-monolith .divider {
+            color: var(--theme-accent);
+            font-size: 16px;
+            font-weight: 800;
+            opacity: 0.8;
+            padding: 0 5px;
+        }
+        .theme-monolith .time-bar {
+            background: var(--theme-accent);
+            align-self: stroke;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 0 18px;
+            min-height: 55px;
+        }
+        .theme-monolith #timer {
+            color: #0f172a;
+            font-size: 35px;
+            font-weight: 800;
+            line-height: 1;
+        }
+        .theme-monolith #extra-time {
+            margin-top: 5px;
+            font-size: 25px !important;
+            color: #b91c1c !important; 
+        }
+        .theme-monolith #period {
+            color: rgba(15, 23, 42, 0.75);
+            font-size: 20px;
+            font-weight: 800;
+            margin-top: 2px;
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="scoreboard-wrapper" class="theme-cyber">
+        <div class="red-cards-container" id="red-cards-home"></div>
+        <div class="red-cards-container" id="red-cards-away"></div>
+
+        <div class="main-bar">
+            <div class="team-block home-team">
+                <div class="color-badge-container">
+                    <div class="color-stripe" id="badge-home-c1"></div>
+                    <div class="color-stripe" id="badge-home-c2"></div>
+                </div>
+                <span id="name-home">CASA</span>
+            </div>
+            <div class="score" id="score-home">0</div>
+            
+            <div class="divider">X</div>
+            
+            <div class="score" id="score-away">0</div>
+            <div class="team-block away-team">
+                <span id="name-away">VISITANTE</span>
+                <div class="color-badge-container">
+                    <div class="color-stripe" id="badge-away-c1"></div>
+                    <div class="color-stripe" id="badge-away-c2"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="time-bar">
+            <div class="timer-container">
+                <div id="timer">00:00</div>
+                <div id="extra-time">+0</div>
+            </div>
+            <div id="period">1° TEMPO</div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyByxKPf3WJgGDLUiPNI_QnEmgsAn0y8s3k",
+            authDomain: "moabb-futebol.firebaseapp.com",
+            databaseURL: "https://moabb-futebol-default-rtdb.firebaseio.com",
+            projectId: "moabb-futebol",
+            storageBucket: "moabb-futebol.firebasestorage.app",
+            messagingSenderId: "154044624617",
+            appId: "1:154044624617:web:cbe332c5b1c468bd270a78"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        let currentMatchListener = null; 
+        let localSeconds = 0;
+        let isTimerRunning = false;
+        let clockInterval = null;
+
+        // 1. ESCUTA GLOBAL PARA SABER QUAL JOGO ESTÁ ATIVO
+        const activeMatchRef = ref(db, 'activeMatchId');
+        
+        onValue(activeMatchRef, (snapshot) => {
+            const activeId = snapshot.val() || "jogo_padrao";
+            console.log("Mudança de partida detectada! Nova partida ativa:", activeId);
+            
+            // Conecta na partida ativa atual
+            const matchRef = ref(db, 'matches/' + activeId);
+            
+            // Ativa o monitoramento dos dados reais do jogo ativo
+            onValue(matchRef, (matchSnapshot) => {
+                const data = matchSnapshot.val();
+                if (!data) return;
+                
+                // Processa e renderiza o placar na tela
+                renderScoreboard(data);
+            });
+        });
+
+        function runLocalClock() {
+            if (isTimerRunning) {
+                if (!clockInterval) {
+                    clockInterval = setInterval(() => {
+                        localSeconds++;
+                        document.getElementById('timer').textContent = formatTime(localSeconds);
+                    }, 1000);
+                }
+            } else {
+                clearInterval(clockInterval);
+                clockInterval = null;
+            }
+        }
+
+        function updateRedCards(team, count) {
+            const container = document.getElementById(`red-cards-${team}`);
+            container.innerHTML = '';
+            const total = parseInt(count) || 0;
+            for (let i = 0; i < total; i++) {
+                const card = document.createElement('div');
+                card.className = 'red-card-icon';
+                container.appendChild(card);
+            }
+        }
+
+        // FUNÇÃO QUE DETÉM TODA A LÓGICA VISUAL INTACTA
+        function renderScoreboard(data) {
+            // Visibilidade do Placar
+            const wrapper = document.getElementById('scoreboard-wrapper');
+            const isVisible = data.overlays && data.overlays.placar;
+            
+            // Definição do Tema Estável
+            const design = data.config.design || { style: "cyber", primary: "#1e1b4b", secondary: "#0f172a", accent: "#f59e0b" };
+            wrapper.className = ''; 
+            if (isVisible) wrapper.classList.add('visible');
+            wrapper.classList.add(`theme-${design.style}`);
+
+            // Nomes e Gols
+            document.getElementById('name-home').textContent = data.config.home.shortName || "CAS";
+            document.getElementById('name-away').textContent = data.config.away.shortName || "VIS";
+            document.getElementById('score-home').textContent = data.stats.home.goals ?? 0;
+            document.getElementById('score-away').textContent = data.stats.away.goals ?? 0;
+
+            // Cartões Vermelhos
+            updateRedCards('home', data.stats.home.redCards);
+            updateRedCards('away', data.stats.away.redCards);
+
+            // Cronômetro e Período
+            document.getElementById('period').textContent = data.timer.period || "1° TEMPO";
+            
+            // Lendo dinamicamente 'injuryTime' ou 'acrescimo' do seu painel
+            let extraTimeVal = 0;
+            const hasInjuryTime = data.timer.injuryTime !== undefined;
+            const showInjury = data.timer.showInjury !== false;
+
+            if (hasInjuryTime && showInjury) {
+                extraTimeVal = parseInt(data.timer.injuryTime) || 0;
+            } else if (data.timer.acrescimo !== undefined) {
+                extraTimeVal = parseInt(data.timer.acrescimo) || 0;
+            }
+
+            const extraTimeEl = document.getElementById('extra-time');
+            if (extraTimeVal > 0) {
+                extraTimeEl.textContent = `+${extraTimeVal}`;
+                extraTimeEl.style.setProperty('display', 'block', 'important');
+            } else {
+                extraTimeEl.style.setProperty('display', 'none', 'important');
+            }
+            
+            if (Math.abs(localSeconds - data.timer.seconds) > 2 || isTimerRunning !== data.timer.isRunning) {
+                localSeconds = data.timer.seconds || 0;
+                document.getElementById('timer').textContent = formatTime(localSeconds);
+            }
+            
+            isTimerRunning = data.timer.isRunning;
+            runLocalClock();
+
+            // Cores dos Uniformes
+            document.getElementById('badge-home-c1').style.backgroundColor = data.config.home.color1 || "#3b82f6";
+            document.getElementById('badge-home-c2').style.backgroundColor = data.config.home.color2 || "#ffffff";
+            document.getElementById('badge-away-c1').style.backgroundColor = data.config.away.color1 || "#ef4444";
+            document.getElementById('badge-away-c2').style.backgroundColor = data.config.away.color2 || "#ffffff";
+
+            // Injetar Variáveis de Cores
+            document.documentElement.style.setProperty('--theme-primary', design.primary);
+            document.documentElement.style.setProperty('--theme-secondary', design.secondary);
+            document.documentElement.style.setProperty('--theme-accent', design.accent);
+        }
+
+        function formatTime(secs) {
+            const m = Math.floor(secs / 60).toString().padStart(2, '0');
+            const s = (secs % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+    </script>
+</body>
+</html>
